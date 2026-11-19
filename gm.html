@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Firewall Breach — GM Console</title>
+<style>
+:root{
+  --bg:#070b14; --panel:#0d1421; --line:#1c2a42; --line2:#2a3d5c;
+  --txt:#d7e3f4; --dim:#8496b0; --mute:#5a6b85;
+  --cyan:#22d3ee; --green:#34d399; --amber:#fbbf24; --red:#f43f5e;
+  --mono:"Cascadia Mono","Consolas",monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{
+  font-family:"Segoe UI",system-ui,sans-serif;background:var(--bg);color:var(--txt);
+  min-height:100vh;padding:22px;
+  background-image:radial-gradient(ellipse 70% 40% at 50% 0%,rgba(34,211,238,.06),transparent 60%);
+}
+h1{font-size:20px;letter-spacing:.16em;text-transform:uppercase;color:var(--cyan);font-weight:800}
+header{display:flex;align-items:center;gap:14px;margin-bottom:20px;flex-wrap:wrap}
+header .sub{font-size:12px;color:var(--mute)}
+.spacer{flex:1}
+.grid{display:grid;grid-template-columns:1.15fr 1fr;gap:16px;align-items:start}
+@media(max-width:900px){.grid{grid-template-columns:1fr}}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px 20px}
+.card h2{font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--mute);margin-bottom:14px;font-weight:800}
+.timer{font-family:var(--mono);font-size:72px;font-weight:800;line-height:1;text-align:center;letter-spacing:.04em;color:var(--txt);transition:color .3s}
+.timer.warn{color:var(--amber)}
+.timer.crit{color:var(--red);animation:pulse 1s infinite}
+@keyframes pulse{50%{opacity:.45}}
+.timer-row{display:flex;gap:9px;margin-top:18px;justify-content:center;flex-wrap:wrap}
+button{
+  font-family:inherit;font-size:12px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;
+  padding:11px 20px;border-radius:9px;border:1px solid var(--line2);background:rgba(255,255,255,.04);
+  color:var(--dim);cursor:pointer;transition:.15s;
+}
+button:hover{background:rgba(255,255,255,.09);color:var(--txt)}
+button.primary{background:linear-gradient(180deg,#0891b2,#0e7490);border-color:var(--cyan);color:#ecfeff;box-shadow:0 0 18px rgba(34,211,238,.28)}
+button.primary:hover{box-shadow:0 0 28px rgba(34,211,238,.5)}
+button.danger{background:linear-gradient(180deg,#e11d48,#9f1239);border-color:#fb7185;color:#fff1f2}
+button:disabled{opacity:.3;cursor:not-allowed;box-shadow:none}
+.runner{display:grid;grid-template-columns:1fr auto auto;gap:9px;align-items:center;padding:10px 0;border-bottom:1px solid rgba(28,42,66,.6)}
+.runner:last-child{border-bottom:0}
+.runner .rname{font-size:13px;font-weight:600}
+.runner .rscore{font-family:var(--mono);font-size:12px;color:var(--dim)}
+.freeze-btn{padding:8px 14px;font-size:10.5px;background:rgba(244,63,94,.12);border-color:rgba(244,63,94,.45);color:#fda4af}
+.freeze-btn:hover{background:rgba(244,63,94,.24)}
+.score{display:flex;justify-content:space-between;align-items:baseline;padding:9px 0;border-bottom:1px solid rgba(28,42,66,.5);font-size:13px}
+.score:last-child{border-bottom:0}
+.score b{font-family:var(--mono);color:var(--cyan);font-size:15px}
+.score.neg b{color:var(--red)}
+.pill{display:inline-block;padding:3px 11px;border-radius:99px;font-size:10px;font-weight:800;letter-spacing:.1em;text-transform:uppercase}
+.pill.on{background:rgba(52,211,153,.15);border:1px solid rgba(52,211,153,.45);color:#6ee7b7}
+.pill.off{background:rgba(244,63,94,.13);border:1px solid rgba(244,63,94,.4);color:#fda4af}
+.hintline{display:flex;justify-content:space-between;padding:8px 0;font-size:12.5px;border-bottom:1px solid rgba(28,42,66,.5)}
+.hintline:last-child{border-bottom:0}
+.hintline .k{color:var(--dim)}
+.hintline .v{font-family:var(--mono);color:var(--green);font-weight:700}
+#gate{position:fixed;inset:0;background:#05080f;display:grid;place-items:center;z-index:99}
+#gate .box{width:340px;background:var(--panel);border:1px solid var(--line2);border-radius:16px;padding:32px 28px;text-align:center}
+#gate h2{font-size:13px;letter-spacing:.2em;text-transform:uppercase;color:var(--cyan);margin-bottom:6px}
+#gate p{font-size:11.5px;color:var(--mute);margin-bottom:20px}
+#gate input{width:100%;padding:13px;border-radius:9px;background:#050a13;border:1px solid var(--line2);color:var(--cyan);font-family:var(--mono);font-size:16px;letter-spacing:.2em;text-align:center;outline:none}
+#gate input:focus{border-color:var(--cyan)}
+#gate button{margin-top:13px;width:100%}
+.log{font-family:var(--mono);font-size:11px;line-height:1.8;color:var(--mute);max-height:170px;overflow-y:auto;background:#050a13;border:1px solid var(--line);border-radius:9px;padding:11px 14px}
+.log div.hi{color:var(--green)}
+.log div.bad{color:#fb7185}
+.keytable{width:100%;font-size:12px;border-collapse:collapse}
+.keytable td{padding:6px 0;border-bottom:1px solid rgba(28,42,66,.5)}
+.keytable td:first-child{color:var(--dim)}
+.keytable td:last-child{font-family:var(--mono);color:var(--green);font-weight:700;text-align:right}
+</style>
+</head>
+<body>
+
+<div id="gate">
+  <div class="box">
+    <h2>GM Console</h2>
+    <p>Facilitator access only</p>
+    <input type="password" id="gatePass" placeholder="PASSPHRASE" autocomplete="off" />
+    <button class="primary" id="gateBtn">Unlock</button>
+  </div>
+</div>
+
+<div id="app" style="display:none">
+  <header>
+    <h1>Firewall Breach</h1>
+    <span class="sub">Checkpoint 4 · GM console</span>
+    <span class="spacer"></span>
+    <span class="pill off" id="statePill">IDLE</span>
+  </header>
+
+  <div class="grid">
+
+    <!-- LEFT -->
+    <div style="display:flex;flex-direction:column;gap:16px">
+
+      <div class="card">
+        <h2>Master timer</h2>
+        <div class="timer" id="clock">15:00</div>
+        <div class="timer-row">
+          <button class="primary" id="btnStart">Start</button>
+          <button id="btnPause">Pause</button>
+          <button id="btnEnd">End round</button>
+          <button class="danger" id="btnReset">Reset all</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Field agents — decoy penalty</h2>
+        <div id="runners"></div>
+        <div style="margin-top:12px;display:flex;gap:9px">
+          <input id="newRunner" placeholder="Add runner name" style="flex:1;padding:10px 12px;border-radius:8px;background:#050a13;border:1px solid var(--line2);color:var(--txt);font-size:12.5px;outline:none" />
+          <button id="addRunner">Add</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Scoring</h2>
+        <div class="score"><span>Base score</span><b id="sBase">100</b></div>
+        <div class="score"><span>Decoy penalties</span><b id="sPen">0</b></div>
+        <div class="score"><span>Accuracy deductions</span><b id="sAcc">0</b></div>
+        <div class="score"><span><b style="color:var(--txt);font-family:inherit;font-size:13px">Final score</b></span><b id="sFinal">100</b></div>
+        <div style="margin-top:12px;display:flex;gap:9px;flex-wrap:wrap">
+          <button id="btnMinus2">−2 accuracy</button>
+          <button id="btnPlus2">+2 accuracy</button>
+          <button id="btnForceSecure">Force secured</button>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- RIGHT -->
+    <div style="display:flex;flex-direction:column;gap:16px">
+
+      <div class="card">
+        <h2>Answer key</h2>
+        <table class="keytable">
+          <tr><td>FAKE URGENCY</td><td>Mail → box lid</td></tr>
+          <tr><td>ASKING FOR PASSWORD</td><td>ChatX → box lid</td></tr>
+          <tr><td>FAKE SENDER</td><td>ChatX → box lid</td></tr>
+          <tr><td>Fragments (box backs)</td><td id="kFrag">FRM · 26 · XP</td></tr>
+          <tr><td>Override code</td><td id="kCode">FRM-26-XP</td></tr>
+        </table>
+        <p style="font-size:11px;color:var(--mute);margin-top:12px;line-height:1.7">
+          6 real boxes (each hint on 2 boxes) + 5 decoys. Decoy backs read “VOID — WRONG BOX”.
+        </p>
+      </div>
+
+      <div class="card">
+        <h2>Live status</h2>
+        <div id="statusLines"></div>
+      </div>
+
+      <div class="card">
+        <h2>Event log</h2>
+        <div class="log" id="log"></div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+const PASS = "gm2026";
+const KEY = "fb_gm_timer";
+const STATE_KEY = "fb_gm_state";
+
+/* ---------- gate ---------- */
+const gate = document.getElementById("gate");
+const app = document.getElementById("app");
+
+document.getElementById("gateBtn").addEventListener("click", tryUnlock);
+document.getElementById("gatePass").addEventListener("keydown", e => { if (e.key === "Enter") tryUnlock(); });
+
+function tryUnlock() {
+  const v = document.getElementById("gatePass").value;
+  if (v === PASS) { gate.style.display = "none"; app.style.display = "block"; init(); }
+  else { document.getElementById("gatePass").style.borderColor = "var(--red)"; document.getElementById("gatePass").value = ""; }
+}
+
+/* ---------- state ---------- */
+let state = load() || {
+  running: false,
+  endsAt: 0,
+  remaining: 15 * 60 * 1000,
+  base: 100,
+  accuracy: 0,
+  penalties: 0,
+  runners: [
+    { name: "Runner 1", decoys: 0 },
+    { name: "Runner 2", decoys: 0 },
+    { name: "Runner 3", decoys: 0 }
+  ]
+};
+
+function load() {
+  try { return JSON.parse(localStorage.getItem(STATE_KEY)); } catch { return null; }
+}
+function save() {
+  localStorage.setItem(STATE_KEY, JSON.stringify(state));
+  push();
+}
+function push() {
+  const payload = {
+    running: state.running,
+    endsAt: state.endsAt,
+    remaining: state.remaining,
+    freezeUntil: state.freezeUntil || 0,
+    freezeRunner: state.freezeRunner || "",
+    forceSecure: Number(localStorage.getItem("fb_force_secure") || 0)
+  };
+  localStorage.setItem(KEY, JSON.stringify(payload));
+}
+
+/* ---------- timer ---------- */
+let ticker = null;
+
+function left() {
+  if (state.running) return Math.max(0, state.endsAt - Date.now());
+  return state.remaining;
+}
+function fmt(ms) {
+  const s = Math.floor(ms / 1000);
+  return String(Math.floor(s / 60)).padStart(2, "0") + ":" + String(s % 60).padStart(2, "0");
+}
+function paintClock() {
+  const el = document.getElementById("clock");
+  const ms = left();
+  el.textContent = fmt(ms);
+  el.className = "timer" + (ms < 120000 ? " crit" : ms < 300000 ? " warn" : "");
+  document.getElementById("statePill").className = "pill " + (state.running ? "on" : "off");
+  document.getElementById("statePill").textContent = state.running ? "RUNNING" : (ms === 0 ? "ENDED" : "PAUSED");
+}
+function startTicker() {
+  clearInterval(ticker);
+  ticker = setInterval(() => {
+    paintClock();
+    if (state.running && left() <= 0) {
+      state.running = false;
+      state.remaining = 0;
+      save();
+      log("Timer expired", "bad");
+      paintClock();
+    }
+  }, 250);
+}
+
+/* ---------- buttons ---------- */
+document.getElementById("btnStart").addEventListener("click", () => {
+  if (state.running) return;
+  if (state.remaining <= 0) state.remaining = 15 * 60 * 1000;
+  state.endsAt = Date.now() + state.remaining;
+  state.running = true;
+  save();
+  log("Timer started — 15:00");
+});
+
+document.getElementById("btnPause").addEventListener("click", () => {
+  if (!state.running) return;
+  state.remaining = left();
+  state.running = false;
+  save();
+  log("Timer paused at " + fmt(state.remaining));
+});
+
+document.getElementById("btnEnd").addEventListener("click", () => {
+  state.running = false;
+  state.remaining = 0;
+  state.endsAt = 0;
+  save();
+  log("Round ended by GM", "bad");
+});
+
+document.getElementById("btnReset").addEventListener("click", () => {
+  if (!confirm("Reset the entire game state? Do this between teams.")) return;
+  state = {
+    running: false,
+    endsAt: 0,
+    remaining: 15 * 60 * 1000,
+    base: 100,
+    accuracy: 0,
+    penalties: 0,
+    freezeUntil: 0,
+    freezeRunner: "",
+    runners: [
+      { name: "Runner 1", decoys: 0 },
+      { name: "Runner 2", decoys: 0 },
+      { name: "Runner 3", decoys: 0 }
+    ]
+  };
+  save();
+  document.getElementById("log").innerHTML = "";
+  log("State reset — ready for next team");
+});
+
+document.getElementById("btnForceSecure").addEventListener("click", () => {
+  localStorage.setItem("fb_force_secure", String(Date.now()));
+  log("Force-secure signalled", "hi");
+});
+
+document.getElementById("btnMinus2").addEventListener("click", () => {
+  state.accuracy -= 2; save(); paint();
+  log("Accuracy −2", "bad");
+});
+document.getElementById("btnPlus2").addEventListener("click", () => {
+  state.accuracy += 2; save(); paint();
+  log("Accuracy +2", "hi");
+});
+
+document.getElementById("addRunner").addEventListener("click", () => {
+  const inp = document.getElementById("newRunner");
+  const name = inp.value.trim();
+  if (!name) return;
+  state.runners.push({ name, decoys: 0 });
+  inp.value = "";
+  save();
+  paint();
+  log("Runner added: " + name);
+});
+
+/* ---------- runners ---------- */
+function paint() {
+  const box = document.getElementById("runners");
+  box.innerHTML = state.runners.map((r, i) => `
+    <div class="runner">
+      <div class="rname">${r.name}</div>
+      <div class="rscore">${r.decoys} decoy${r.decoys === 1 ? "" : "s"}</div>
+      <button class="freeze-btn" data-i="${i}">Freeze 15s</button>
+    </div>
+  `).join("");
+
+  box.querySelectorAll(".freeze-btn").forEach((b) => {
+    b.addEventListener("click", () => {
+      const i = +b.dataset.i;
+      const r = state.runners[i];
+      r.decoys++;
+      state.penalties += 2;
+      state.freezeUntil = Date.now() + 15000;
+      state.freezeRunner = r.name;
+      save();
+      paint();
+      log(`${r.name} opened a decoy — −2 pts, 15s freeze`, "bad");
+    });
+  });
+
+  document.getElementById("sBase").textContent = state.base;
+  document.getElementById("sPen").textContent = "-" + state.penalties;
+  document.getElementById("sAcc").textContent = (state.accuracy >= 0 ? "+" : "") + state.accuracy;
+  const fin = state.base - state.penalties + state.accuracy;
+  const fe = document.getElementById("sFinal");
+  fe.textContent = fin;
+  fe.parentElement.className = "score" + (fin < 0 ? " neg" : "");
+}
+
+/* ---------- status ---------- */
+function paintStatus() {
+  const el = document.getElementById("statusLines");
+  el.innerHTML = `
+    <div class="hintline"><span class="k">Time remaining</span><span class="v">${fmt(left())}</span></div>
+    <div class="hintline"><span class="k">Timer</span><span class="v">${state.running ? "RUNNING" : "PAUSED"}</span></div>
+    <div class="hintline"><span class="k">Decoy opens</span><span class="v">${state.runners.reduce((a, r) => a + r.decoys, 0)}</span></div>
+    <div class="hintline"><span class="k">Penalties</span><span class="v">-${state.penalties}</span></div>
+    <div class="hintline"><span class="k">Freeze active</span><span class="v">${state.freezeUntil && Date.now() < state.freezeUntil ? state.freezeRunner : "none"}</span></div>
+  `;
+}
+
+/* ---------- log ---------- */
+function log(msg, cls = "") {
+  const el = document.getElementById("log");
+  const d = document.createElement("div");
+  d.className = cls;
+  const t = new Date().toLocaleTimeString("en-GB", { hour12: false });
+  d.textContent = `[${t}] ${msg}`;
+  el.appendChild(d);
+  el.scrollTop = el.scrollHeight;
+}
+
+/* ---------- init ---------- */
+function init() {
+  paint();
+  paintClock();
+  paintStatus();
+  startTicker();
+  setInterval(paintStatus, 1000);
+  if (state.running) log("Resumed with existing timer");
+  else log("Console ready");
+}
+
+window.addEventListener("storage", (e) => {
+  if (e.key === STATE_KEY && e.newValue) {
+    try { state = JSON.parse(e.newValue); paint(); paintClock(); } catch {}
+  }
+});
+</script>
+</body>
+</html>

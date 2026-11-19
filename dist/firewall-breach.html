@@ -1,0 +1,3589 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>CYBEROPS-01</title>
+<style>
+/* ============================================================
+   FIREWALL BREACH OPS - Desktop shell
+   ============================================================ */
+
+:root {
+  --bg-0: #05080f;
+  --bg-1: #0a0f1e;
+  --bg-2: #101828;
+  --bg-3: #1a2438;
+  --line: #1f2c44;
+  --line-2: #2b3d5c;
+  --txt: #d7e3f4;
+  --txt-dim: #8496b0;
+  --txt-mute: #5a6b85;
+  --cyan: #22d3ee;
+  --cyan-dim: #0e7490;
+  --green: #34d399;
+  --amber: #fbbf24;
+  --red: #f43f5e;
+  --red-deep: #7f1d1d;
+  --purple: #a78bfa;
+  --font: "Segoe UI", "Inter", system-ui, -apple-system, sans-serif;
+  --mono: "Cascadia Mono", "Consolas", "Courier New", monospace;
+  --r: 10px;
+  --shadow: 0 18px 50px rgba(0, 0, 0, .65);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  height: 100%;
+  overflow: hidden;
+  font-family: var(--font);
+  background: var(--bg-0);
+  color: var(--txt);
+  -webkit-font-smoothing: antialiased;
+  user-select: none;
+}
+
+button { font-family: inherit; cursor: pointer; border: 0; background: none; color: inherit; }
+input { font-family: inherit; }
+
+/* ---------- Wallpaper ---------- */
+#desktop {
+  position: fixed;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 80% 60% at 50% -10%, rgba(34, 211, 238, .10), transparent 60%),
+    radial-gradient(ellipse 60% 50% at 100% 100%, rgba(167, 139, 250, .07), transparent 60%),
+    linear-gradient(160deg, #070c17 0%, var(--bg-1) 45%, #060a14 100%);
+  overflow: hidden;
+  transition: filter .8s ease;
+}
+
+#grid {
+  position: absolute;
+  inset: -50%;
+  background-image:
+    linear-gradient(rgba(34, 211, 238, .055) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(34, 211, 238, .055) 1px, transparent 1px);
+  background-size: 46px 46px;
+  transform: perspective(700px) rotateX(58deg);
+  transform-origin: 50% 0%;
+  animation: gridScroll 18s linear infinite;
+  pointer-events: none;
+}
+@keyframes gridScroll {
+  from { background-position: 0 0; }
+  to   { background-position: 0 460px; }
+}
+
+body.infected #desktop { filter: saturate(.55) hue-rotate(-18deg) brightness(.82); }
+
+/* ---------- Top status bar ---------- */
+#statusbar {
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 0 14px;
+  background: rgba(6, 11, 20, .82);
+  border-bottom: 1px solid var(--line);
+  backdrop-filter: blur(10px);
+  font-size: 12px;
+  color: var(--txt-dim);
+  z-index: 30;
+  letter-spacing: .02em;
+}
+
+.sb-brand {
+  font-weight: 700;
+  letter-spacing: .18em;
+  font-size: 11px;
+  color: var(--cyan);
+  text-transform: uppercase;
+}
+.sb-brand::before {
+  content: "";
+  display: inline-block;
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: var(--red);
+  margin-right: 8px;
+  vertical-align: 1px;
+  box-shadow: 0 0 10px var(--red);
+  animation: pulseDot 1.6s ease-in-out infinite;
+}
+@keyframes pulseDot { 50% { opacity: .25; } }
+
+.sb-spacer { flex: 1; }
+
+.sb-threat {
+  padding: 2px 10px;
+  border-radius: 99px;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  background: rgba(244, 63, 94, .14);
+  border: 1px solid rgba(244, 63, 94, .45);
+  color: #fda4af;
+}
+body.secured .sb-threat {
+  background: rgba(52, 211, 153, .14);
+  border-color: rgba(52, 211, 153, .5);
+  color: #6ee7b7;
+}
+
+#clock { font-family: var(--mono); font-size: 12.5px; color: var(--txt); min-width: 58px; text-align: right; }
+
+/* ---------- Desktop icons ---------- */
+#icons {
+  position: absolute;
+  top: 56px;
+  left: 22px;
+  display: flex;
+  flex-direction: column;
+  flex-wrap: wrap;
+  gap: 6px;
+  max-height: calc(100% - 130px);
+  z-index: 10;
+}
+
+.icon {
+  width: 96px;
+  padding: 10px 6px 8px;
+  border-radius: var(--r);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid transparent;
+  transition: background .12s, border-color .12s, transform .12s;
+}
+.icon:hover { background: rgba(34, 211, 238, .07); border-color: rgba(34, 211, 238, .22); transform: translateY(-1px); }
+.icon:active { transform: translateY(0) scale(.97); }
+
+.icon svg { width: 34px; height: 34px; }
+.icon span {
+  font-size: 11px;
+  color: var(--txt);
+  text-align: center;
+  line-height: 1.25;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, .9);
+}
+.icon.dead { opacity: .45; cursor: not-allowed; }
+.icon.dead:hover { background: none; border-color: transparent; transform: none; }
+.icon .badge {
+  position: absolute;
+  margin: -34px 0 0 26px;
+  min-width: 17px; height: 17px;
+  border-radius: 99px;
+  background: var(--red);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  display: grid;
+  place-items: center;
+  padding: 0 5px;
+  box-shadow: 0 0 12px rgba(244, 63, 94, .8);
+}
+
+/* ---------- Taskbar ---------- */
+#taskbar {
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px;
+  background: rgba(6, 11, 20, .9);
+  border-top: 1px solid var(--line);
+  backdrop-filter: blur(14px);
+  z-index: 900;
+}
+
+#tasklist { display: flex; gap: 6px; flex: 1; overflow: hidden; }
+
+.taskbtn {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  height: 32px;
+  padding: 0 12px;
+  border-radius: 7px;
+  font-size: 12px;
+  color: var(--txt-dim);
+  background: rgba(255, 255, 255, .03);
+  border: 1px solid var(--line);
+  max-width: 170px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: all .12s;
+}
+.taskbtn:hover { color: var(--txt); border-color: var(--line-2); }
+.taskbtn.active { background: rgba(34, 211, 238, .10); border-color: rgba(34, 211, 238, .45); color: var(--cyan); }
+.taskbtn svg { width: 14px; height: 14px; flex: none; }
+
+#hintpips {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 0 12px;
+  font-size: 11px;
+  color: var(--txt-mute);
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+.pip {
+  width: 9px; height: 9px;
+  border-radius: 99px;
+  border: 1.5px solid var(--line-2);
+  transition: all .3s;
+}
+.pip.on {
+  background: var(--cyan);
+  border-color: var(--cyan);
+  box-shadow: 0 0 12px var(--cyan);
+}
+
+/* ---------- Window base ---------- */
+.win {
+  position: absolute;
+  min-width: 340px;
+  min-height: 220px;
+  background: var(--bg-2);
+  border: 1px solid var(--line-2);
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: winIn .18s cubic-bezier(.2, .9, .3, 1.2);
+  z-index: 100;
+}
+@keyframes winIn {
+  from { opacity: 0; transform: scale(.965) translateY(8px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+.win.focused { border-color: rgba(34, 211, 238, .5); box-shadow: 0 18px 60px rgba(0, 0, 0, .75), 0 0 0 1px rgba(34, 211, 238, .22); }
+.win.closing { animation: winOut .14s ease forwards; }
+@keyframes winOut { to { opacity: 0; transform: scale(.97); } }
+
+.titlebar {
+  height: 38px;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 0 8px 0 13px;
+  background: linear-gradient(180deg, #16203300, #0b1220);
+  border-bottom: 1px solid var(--line);
+  cursor: grab;
+  flex: none;
+}
+.titlebar:active { cursor: grabbing; }
+.titlebar svg { width: 15px; height: 15px; flex: none; }
+.titlebar h2 {
+  font-size: 12.5px;
+  font-weight: 600;
+  letter-spacing: .01em;
+  color: var(--txt);
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.winbtns { display: flex; gap: 2px; }
+.winbtns button {
+  width: 30px; height: 26px;
+  border-radius: 6px;
+  display: grid;
+  place-items: center;
+  color: var(--txt-dim);
+  transition: all .12s;
+}
+.winbtns button:hover { background: rgba(255, 255, 255, .08); color: var(--txt); }
+.winbtns button.close:hover { background: var(--red); color: #fff; }
+.winbtns svg { width: 13px; height: 13px; }
+
+.winbody { flex: 1; overflow: hidden; display: flex; min-height: 0; }
+
+.resize {
+  position: absolute;
+  right: 0; bottom: 0;
+  width: 16px; height: 16px;
+  cursor: nwse-resize;
+  z-index: 5;
+}
+
+/* ---------- Toast ---------- */
+#toasts {
+  position: absolute;
+  bottom: 62px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: center;
+  z-index: 2000;
+  pointer-events: none;
+}
+.toast {
+  padding: 10px 18px;
+  border-radius: 99px;
+  font-size: 13px;
+  background: rgba(16, 24, 40, .96);
+  border: 1px solid var(--line-2);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, .6);
+  animation: toastIn .2s ease;
+  max-width: 560px;
+  text-align: center;
+}
+.toast.bad { border-color: rgba(244, 63, 94, .6); color: #fda4af; }
+.toast.good { border-color: rgba(52, 211, 153, .6); color: #6ee7b7; }
+.toast.info { border-color: rgba(34, 211, 238, .5); color: #7dd3fc; }
+@keyframes toastIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.toast.out { animation: toastOut .25s ease forwards; }
+@keyframes toastOut { to { opacity: 0; transform: translateY(-6px); } }
+
+/* ---------- Utility ---------- */
+.hidden { display: none !important; }
+.scroll::-webkit-scrollbar { width: 9px; }
+.scroll::-webkit-scrollbar-track { background: transparent; }
+.scroll::-webkit-scrollbar-thumb { background: var(--line-2); border-radius: 99px; }
+.scroll::-webkit-scrollbar-thumb:hover { background: #3a4f73; }
+
+
+/* ============================================================
+   FIREWALL BREACH OPS - App internals
+   ============================================================ */
+
+/* ===================== MAIL ===================== */
+.mail-app { display: flex; width: 100%; height: 100%; }
+
+.mail-side {
+  width: 250px;
+  flex: none;
+  border-right: 1px solid var(--line);
+  background: #0c1422;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+.mail-side-head {
+  padding: 12px 14px 10px;
+  border-bottom: 1px solid var(--line);
+}
+.mail-side-head h3 {
+  font-size: 10.5px;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  color: var(--txt-mute);
+  font-weight: 700;
+}
+.mail-count { font-size: 11px; color: var(--txt-dim); margin-top: 4px; }
+
+.mail-list { flex: 1; overflow-y: auto; min-height: 0; }
+
+.mail-item {
+  padding: 11px 14px;
+  border-bottom: 1px solid rgba(31, 44, 68, .55);
+  cursor: pointer;
+  border-left: 2px solid transparent;
+  transition: background .12s, border-color .12s;
+}
+.mail-item:hover { background: rgba(34, 211, 238, .05); }
+.mail-item.active { background: rgba(34, 211, 238, .09); border-left-color: var(--cyan); }
+.mail-item .mi-from {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--txt);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.mail-item .mi-subj {
+  font-size: 12px;
+  color: var(--txt-dim);
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.mail-item .mi-time { font-size: 10px; color: var(--txt-mute); margin-top: 3px; font-family: var(--mono); }
+.mail-item.done .mi-from::after {
+  content: "✓";
+  color: var(--green);
+  margin-left: 6px;
+  font-size: 11px;
+}
+
+.mail-read {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+.mail-read-head {
+  padding: 16px 22px 13px;
+  border-bottom: 1px solid var(--line);
+  flex: none;
+}
+.mail-read-head h1 {
+  font-size: 16.5px;
+  font-weight: 600;
+  line-height: 1.35;
+  color: var(--txt);
+}
+.mail-meta { margin-top: 9px; display: flex; flex-direction: column; gap: 3px; }
+.mail-meta div { font-size: 11.5px; color: var(--txt-dim); }
+.mail-meta b { color: var(--txt-mute); font-weight: 600; display: inline-block; min-width: 62px; }
+.mail-meta .from-bad { color: #fca5a5; }
+.mail-meta .flag {
+  display: inline-block;
+  margin-left: 7px;
+  font-size: 9.5px;
+  padding: 1px 7px;
+  border-radius: 99px;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  font-weight: 700;
+}
+
+.mail-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px 22px 60px;
+  font-size: 13.5px;
+  line-height: 1.85;
+  color: #c3d2e6;
+  min-height: 0;
+  user-select: text;
+}
+.mail-body p { margin-bottom: 13px; }
+.mail-body .sig { color: var(--txt-mute); font-size: 12.5px; border-top: 1px solid var(--line); padding-top: 12px; margin-top: 20px; }
+
+/* clickable lines */
+.cl {
+  display: block;
+  border-radius: 5px;
+  padding: 1px 4px;
+  margin: 0 -4px;
+  cursor: pointer;
+  transition: background .14s, box-shadow .14s, color .14s;
+}
+.cl:hover {
+  background: rgba(34, 211, 238, .13);
+  box-shadow: inset 0 0 0 1px rgba(34, 211, 238, .34);
+  color: #e8f4ff;
+}
+.cl.found {
+  background: rgba(52, 211, 153, .16);
+  box-shadow: inset 0 0 0 1px rgba(52, 211, 153, .45);
+  color: #d1fae5;
+  cursor: default;
+}
+.cl.found::after {
+  content: "  ✓ " attr(data-hint);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: .09em;
+  color: #6ee7b7;
+  font-family: var(--mono);
+}
+.cl.locked { pointer-events: none; opacity: .55; }
+
+/* ===================== CHATX ===================== */
+.chat-app { display: flex; width: 100%; height: 100%; }
+
+.chat-side {
+  width: 268px;
+  flex: none;
+  border-right: 1px solid var(--line);
+  background: #0c1422;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+.chat-side-head {
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+.chat-side-head h3 {
+  font-size: 10.5px;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  color: var(--txt-mute);
+  font-weight: 700;
+}
+.chat-side-head .dot { width: 7px; height: 7px; border-radius: 99px; background: var(--green); box-shadow: 0 0 8px var(--green); }
+
+.chat-list { flex: 1; overflow-y: auto; min-height: 0; }
+
+.chat-item {
+  padding: 11px 14px;
+  display: flex;
+  gap: 10px;
+  cursor: pointer;
+  border-left: 2px solid transparent;
+  border-bottom: 1px solid rgba(31, 44, 68, .5);
+  transition: background .12s, border-color .12s;
+}
+.chat-item:hover { background: rgba(34, 211, 238, .05); }
+.chat-item.active { background: rgba(34, 211, 238, .09); border-left-color: var(--cyan); }
+
+.avatar {
+  width: 36px; height: 36px;
+  border-radius: 50%;
+  flex: none;
+  display: grid;
+  place-items: center;
+  font-size: 13px;
+  font-weight: 700;
+  background: linear-gradient(135deg, #1e3a5f, #0f2438);
+  color: #7dd3fc;
+  border: 1px solid var(--line-2);
+}
+.avatar.warn { background: linear-gradient(135deg, #4c1d24, #2a1015); color: #fda4af; border-color: rgba(244, 63, 94, .45); }
+
+.ci-meta { flex: 1; min-width: 0; }
+.ci-name { font-size: 12.5px; font-weight: 700; color: var(--txt); display: flex; align-items: center; gap: 6px; }
+.ci-name .tag {
+  font-size: 8.5px; padding: 1px 5px; border-radius: 4px; letter-spacing: .07em;
+  background: rgba(251, 191, 36, .16); color: var(--amber); border: 1px solid rgba(251, 191, 36, .35);
+  text-transform: uppercase; font-weight: 800;
+}
+.ci-prev {
+  font-size: 11.5px; color: var(--txt-mute); margin-top: 2px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.chat-item.done .ci-name::after { content: "✓"; color: var(--green); font-size: 11px; }
+
+.chat-main { flex: 1; display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+.chat-head {
+  padding: 11px 18px;
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: none;
+  background: #0d1524;
+}
+.chat-head .ch-name { font-size: 13.5px; font-weight: 700; }
+.chat-head .ch-sub { font-size: 11px; color: var(--txt-mute); margin-top: 1px; }
+
+.chat-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  min-height: 0;
+  background:
+    radial-gradient(circle at 20% 10%, rgba(34, 211, 238, .035), transparent 45%),
+    radial-gradient(circle at 80% 90%, rgba(167, 139, 250, .035), transparent 45%),
+    #0a1220;
+}
+
+.bubble {
+  max-width: 74%;
+  padding: 9px 13px;
+  border-radius: 13px;
+  font-size: 13px;
+  line-height: 1.65;
+  background: #16202f;
+  color: #cfdcec;
+  border: 1px solid #1e2b3f;
+  border-bottom-left-radius: 4px;
+  align-self: flex-start;
+  user-select: text;
+}
+.bubble.me {
+  align-self: flex-end;
+  background: #103244;
+  border-color: #17475c;
+  border-bottom-left-radius: 13px;
+  border-bottom-right-radius: 4px;
+  color: #d6f1fa;
+}
+.bubble.sys {
+  align-self: center;
+  background: rgba(251, 191, 36, .08);
+  border-color: rgba(251, 191, 36, .3);
+  color: #fcd34d;
+  font-size: 10.5px;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+  font-weight: 700;
+  padding: 5px 12px;
+  border-radius: 99px;
+}
+.bubble .btime {
+  display: block;
+  font-size: 9.5px;
+  color: var(--txt-mute);
+  margin-top: 5px;
+  font-family: var(--mono);
+  text-align: right;
+}
+.bubble .cl { padding: 0 2px; margin: 0 -2px; display: inline; }
+
+.chat-foot {
+  padding: 9px 14px;
+  border-top: 1px solid var(--line);
+  font-size: 11px;
+  color: var(--txt-mute);
+  text-align: center;
+  background: #0d1524;
+  font-style: italic;
+  flex: none;
+}
+
+/* ===================== SYSTEM OVERRIDE ===================== */
+.ovr {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  padding: 22px 28px 20px;
+  overflow-y: auto;
+  background:
+    radial-gradient(ellipse 60% 40% at 50% 0%, rgba(34, 211, 238, .07), transparent 65%),
+    var(--bg-2);
+}
+
+.ovr-head { text-align: center; flex: none; }
+.ovr-head .kick {
+  font-size: 10px;
+  letter-spacing: .3em;
+  color: var(--cyan);
+  text-transform: uppercase;
+  font-weight: 800;
+}
+.ovr-head h1 {
+  font-size: 22px;
+  font-weight: 700;
+  margin-top: 5px;
+  color: #eaf6ff;
+}
+.ovr-head p { font-size: 12px; color: var(--txt-dim); margin-top: 6px; max-width: 470px; margin-inline: auto; line-height: 1.6; }
+
+.frag-row {
+  display: flex;
+  gap: 14px;
+  justify-content: center;
+  margin: 24px 0 8px;
+  flex: none;
+}
+
+.frag {
+  width: 108px;
+  height: 92px;
+  border-radius: 12px;
+  border: 2px dashed var(--line-2);
+  background: rgba(10, 16, 28, .8);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  transition: all .2s;
+  position: relative;
+}
+.frag .flabel {
+  font-size: 8.5px;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  color: var(--txt-mute);
+  font-weight: 700;
+}
+.frag .fval {
+  font-family: var(--mono);
+  font-size: 21px;
+  font-weight: 700;
+  letter-spacing: .12em;
+  color: var(--txt-mute);
+}
+.frag.done {
+  border-style: solid;
+  border-color: rgba(52, 211, 153, .65);
+  background: rgba(52, 211, 153, .09);
+  box-shadow: 0 0 22px rgba(52, 211, 153, .18);
+}
+.frag.done .fval { color: var(--green); text-shadow: 0 0 16px rgba(52, 211, 153, .6); }
+.frag.done .flabel { color: #6ee7b7; }
+.frag.shake { animation: shake .34s; }
+
+.code-row {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  margin-top: 18px;
+  flex: none;
+}
+.code-row input {
+  width: 300px;
+  height: 46px;
+  border-radius: 10px;
+  background: #070d17;
+  border: 1px solid var(--line-2);
+  color: var(--cyan);
+  font-family: var(--mono);
+  font-size: 18px;
+  letter-spacing: .2em;
+  text-align: center;
+  text-transform: uppercase;
+  outline: none;
+  transition: border-color .15s, box-shadow .15s;
+}
+.code-row input::placeholder { color: #2d3d55; letter-spacing: .1em; font-size: 13px; }
+.code-row input:focus { border-color: var(--cyan); box-shadow: 0 0 0 3px rgba(34, 211, 238, .14); }
+.code-row input.bad { border-color: var(--red); box-shadow: 0 0 0 3px rgba(244, 63, 94, .16); animation: shake .34s; }
+.code-row input:disabled { opacity: .5; }
+
+.btn {
+  height: 46px;
+  padding: 0 22px;
+  border-radius: 10px;
+  font-size: 12.5px;
+  font-weight: 700;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  border: 1px solid var(--line-2);
+  background: rgba(255, 255, 255, .04);
+  color: var(--txt-dim);
+  transition: all .15s;
+}
+.btn:hover:not(:disabled) { background: rgba(255, 255, 255, .08); color: var(--txt); }
+.btn.primary {
+  background: linear-gradient(180deg, #0891b2, #0e7490);
+  border-color: #22d3ee;
+  color: #ecfeff;
+  box-shadow: 0 0 22px rgba(34, 211, 238, .3);
+}
+.btn.primary:hover:not(:disabled) { background: linear-gradient(180deg, #22d3ee, #0891b2); box-shadow: 0 0 30px rgba(34, 211, 238, .5); }
+.btn.danger {
+  background: linear-gradient(180deg, #e11d48, #9f1239);
+  border-color: #fb7185;
+  color: #fff1f2;
+  box-shadow: 0 0 26px rgba(244, 63, 94, .35);
+}
+.btn.danger:hover:not(:disabled) { box-shadow: 0 0 40px rgba(244, 63, 94, .6); }
+.btn:disabled { opacity: .3; cursor: not-allowed; box-shadow: none; }
+
+.kill-row { display: flex; justify-content: center; margin-top: 20px; flex: none; }
+.kill-row .btn { height: 54px; padding: 0 46px; font-size: 14px; letter-spacing: .14em; }
+
+.ovr-log {
+  margin-top: 20px;
+  flex: 1;
+  min-height: 130px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: #050910;
+  padding: 12px 14px;
+  font-family: var(--mono);
+  font-size: 11.5px;
+  line-height: 1.75;
+  color: #4ade80;
+  overflow-y: auto;
+  white-space: pre-wrap;
+  user-select: text;
+}
+.ovr-log .l-warn { color: var(--amber); }
+.ovr-log .l-err { color: #fb7185; }
+.ovr-log .l-ok { color: var(--green); }
+.ovr-log .l-dim { color: var(--txt-mute); }
+.ovr-log .l-cy { color: var(--cyan); }
+
+.progress {
+  height: 6px;
+  border-radius: 99px;
+  background: #131c2c;
+  overflow: hidden;
+  margin-top: 14px;
+  flex: none;
+}
+.progress > div {
+  height: 100%;
+  width: 0%;
+  border-radius: 99px;
+  background: linear-gradient(90deg, var(--cyan), var(--green));
+  transition: width .3s ease;
+  box-shadow: 0 0 14px rgba(34, 211, 238, .6);
+}
+
+.ovr-note {
+  margin-top: 12px;
+  font-size: 11.5px;
+  color: var(--txt-mute);
+  text-align: center;
+}
+.ovr-note b { color: var(--amber); }
+
+/* ===================== FILES ===================== */
+.files {
+  display: flex;
+  width: 100%;
+  height: 100%;
+}
+.files-side {
+  width: 190px;
+  flex: none;
+  background: #0c1422;
+  border-right: 1px solid var(--line);
+  padding: 12px 8px;
+}
+.files-side h3 {
+  font-size: 10px; letter-spacing: .16em; text-transform: uppercase;
+  color: var(--txt-mute); padding: 0 8px 8px; font-weight: 700;
+}
+.fs-tree { display: flex; flex-direction: column; gap: 1px; }
+.fs-node {
+  padding: 6px 9px;
+  border-radius: 6px;
+  font-size: 12px;
+  color: var(--txt-dim);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+.fs-node:hover { background: rgba(255, 255, 255, .05); color: var(--txt); }
+.fs-node.active { background: rgba(34, 211, 238, .1); color: var(--cyan); }
+.fs-node svg { width: 13px; height: 13px; }
+
+.files-main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+.files-bar {
+  padding: 8px 14px;
+  border-bottom: 1px solid var(--line);
+  font-size: 11.5px;
+  color: var(--txt-mute);
+  font-family: var(--mono);
+  background: #0d1524;
+  flex: none;
+}
+.files-grid {
+  flex: 1;
+  padding: 16px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(104px, 1fr));
+  gap: 6px;
+  align-content: start;
+  overflow-y: auto;
+  min-height: 0;
+}
+.file-item {
+  padding: 12px 8px;
+  border-radius: 8px;
+  text-align: center;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: all .12s;
+}
+.file-item:hover { background: rgba(34, 211, 238, .07); border-color: rgba(34, 211, 238, .22); }
+.file-item svg { width: 28px; height: 28px; }
+.file-item span {
+  display: block;
+  font-size: 10.5px;
+  color: var(--txt-dim);
+  margin-top: 6px;
+  word-break: break-word;
+  line-height: 1.3;
+}
+.file-item.exec svg { filter: drop-shadow(0 0 8px rgba(244, 63, 94, .8)); }
+
+/* ===================== NOTEPAD ===================== */
+.notepad {
+  width: 100%; height: 100%;
+  display: flex; flex-direction: column;
+  background: #0b1220;
+}
+.np-bar {
+  padding: 7px 12px;
+  background: #0d1524;
+  border-bottom: 1px solid var(--line);
+  font-size: 11px;
+  color: var(--txt-mute);
+  font-family: var(--mono);
+  display: flex;
+  gap: 14px;
+  flex: none;
+}
+.np-text {
+  flex: 1;
+  padding: 18px 22px;
+  font-family: var(--mono);
+  font-size: 13px;
+  line-height: 1.85;
+  color: #c3d2e6;
+  overflow-y: auto;
+  white-space: pre-wrap;
+  user-select: text;
+  border: 0;
+  outline: none;
+  background: transparent;
+  resize: none;
+  width: 100%;
+}
+.np-text.danger { color: #fca5a5; }
+
+/* ===================== TASK MANAGER ===================== */
+.tm { width: 100%; height: 100%; display: flex; flex-direction: column; background: #0b1220; }
+.tm-bar {
+  padding: 8px 14px;
+  border-bottom: 1px solid var(--line);
+  background: #0d1524;
+  display: flex;
+  gap: 18px;
+  font-size: 11px;
+  color: var(--txt-mute);
+  font-family: var(--mono);
+  flex: none;
+}
+.tm-bar b { color: var(--txt-dim); }
+.tm-table { flex: 1; overflow-y: auto; min-height: 0; }
+.tm-row {
+  display: grid;
+  grid-template-columns: 2.2fr 1fr 1fr 1fr;
+  padding: 7px 14px;
+  font-size: 11.5px;
+  font-family: var(--mono);
+  color: var(--txt-dim);
+  border-bottom: 1px solid rgba(31, 44, 68, .4);
+}
+.tm-row.head {
+  color: var(--txt-mute);
+  font-size: 10px;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  font-family: var(--font);
+  font-weight: 700;
+  background: #0d1524;
+  position: sticky;
+  top: 0;
+}
+.tm-row.sus { color: #fca5a5; background: rgba(244, 63, 94, .07); }
+.tm-row.sus::after {
+  content: "⚠";
+  justify-self: end;
+  color: var(--red);
+}
+
+/* ===================== HINT CARD ===================== */
+#hintcard {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%) scale(.94);
+  width: min(780px, 88vw);
+  border-radius: 18px;
+  padding: 34px 40px 30px;
+  text-align: center;
+  z-index: 1500;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .3s ease, transform .3s cubic-bezier(.2, .9, .3, 1.2);
+  border: 1px solid rgba(34, 211, 238, .5);
+  background: linear-gradient(160deg, #0d1a2b, #0a1320);
+  box-shadow: 0 30px 90px rgba(0, 0, 0, .8), 0 0 80px rgba(34, 211, 238, .16);
+}
+#hintcard.show { opacity: 1; transform: translate(-50%, -50%) scale(1); pointer-events: auto; }
+#hintcard .hc-kick {
+  font-size: 11px;
+  letter-spacing: .34em;
+  text-transform: uppercase;
+  font-weight: 800;
+  color: var(--green);
+}
+#hintcard .hc-title {
+  font-size: clamp(34px, 5.6vw, 62px);
+  font-weight: 800;
+  letter-spacing: .02em;
+  line-height: 1.08;
+  margin: 12px 0 6px;
+  color: #eaf6ff;
+  text-shadow: 0 0 50px rgba(34, 211, 238, .5);
+}
+#hintcard .hc-sub {
+  font-size: 13px;
+  color: var(--txt-dim);
+  margin-top: 16px;
+  letter-spacing: .02em;
+}
+#hintcard .hc-runner {
+  margin-top: 22px;
+  padding: 15px 22px;
+  border-radius: 12px;
+  background: rgba(251, 191, 36, .09);
+  border: 1px solid rgba(251, 191, 36, .38);
+  font-size: 13.5px;
+  color: #fcd34d;
+  line-height: 1.6;
+}
+#hintcard .hc-runner b {
+  display: block;
+  font-size: 17px;
+  letter-spacing: .08em;
+  color: #fde68a;
+  margin-top: 5px;
+  text-transform: uppercase;
+}
+#hintcard .hc-close {
+  margin-top: 18px;
+  font-size: 11px;
+  color: var(--txt-mute);
+  letter-spacing: .1em;
+  text-transform: uppercase;
+}
+
+/* ===================== FOUND HINTS SIDEBAR ===================== */
+#hintbar {
+  position: absolute;
+  right: 14px;
+  top: 46px;
+  width: 236px;
+  z-index: 800;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  pointer-events: none;
+}
+.hintchip {
+  background: rgba(10, 16, 28, .93);
+  border: 1px solid rgba(52, 211, 153, .42);
+  border-left: 3px solid var(--green);
+  border-radius: 9px;
+  padding: 9px 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, .55);
+  animation: chipIn .3s cubic-bezier(.2, .9, .3, 1.2);
+}
+@keyframes chipIn {
+  from { opacity: 0; transform: translateX(28px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+.hintchip .hc-lbl {
+  font-size: 9px;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  color: var(--txt-mute);
+  font-weight: 700;
+}
+.hintchip .hc-val {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--green);
+  letter-spacing: .04em;
+  margin-top: 3px;
+  line-height: 1.25;
+}
+.hintchip .hc-src { font-size: 10px; color: var(--txt-mute); margin-top: 3px; }
+
+/* ===================== FREEZE OVERLAY ===================== */
+#freeze {
+  position: absolute;
+  inset: 0;
+  z-index: 3000;
+  display: grid;
+  place-items: center;
+  background: rgba(10, 4, 8, .95);
+  backdrop-filter: blur(6px) saturate(.3);
+  text-align: center;
+}
+#freeze .fz-ico {
+  font-size: 64px;
+  line-height: 1;
+  margin-bottom: 12px;
+  animation: shake .5s;
+}
+#freeze h1 {
+  font-size: clamp(38px, 7vw, 76px);
+  font-weight: 900;
+  letter-spacing: .1em;
+  color: #fb7185;
+  text-shadow: 0 0 60px rgba(244, 63, 94, .8);
+}
+#freeze .fz-sub { font-size: 15px; color: #fda4af; margin-top: 14px; letter-spacing: .05em; }
+#freeze .fz-count {
+  font-family: var(--mono);
+  font-size: 76px;
+  font-weight: 800;
+  color: #fff1f2;
+  margin-top: 18px;
+  text-shadow: 0 0 50px rgba(244, 63, 94, .9);
+}
+
+
+/* ============================================================
+   FIREWALL BREACH OPS - Animations, boot, breach, secured
+   ============================================================ */
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  15% { transform: translateX(-7px); }
+  30% { transform: translateX(6px); }
+  45% { transform: translateX(-5px); }
+  60% { transform: translateX(4px); }
+  75% { transform: translateX(-2px); }
+}
+
+/* ---------- Boot screen ---------- */
+#boot {
+  position: fixed;
+  inset: 0;
+  background: #03060b;
+  z-index: 5000;
+  padding: 40px 46px;
+  font-family: var(--mono);
+  font-size: 13px;
+  line-height: 1.9;
+  color: #4b6b8a;
+  overflow: hidden;
+  white-space: pre-wrap;
+  user-select: none;
+}
+#boot .b-brand {
+  color: var(--cyan);
+  font-size: 19px;
+  font-weight: 800;
+  letter-spacing: .34em;
+  margin-bottom: 20px;
+  display: block;
+}
+#boot .b-ok { color: var(--green); }
+#boot .b-warn { color: var(--amber); }
+#boot .b-err { color: var(--red); }
+#boot .b-cursor {
+  display: inline-block;
+  width: 8px;
+  height: 15px;
+  background: var(--cyan);
+  vertical-align: -2px;
+  animation: blink 1s step-end infinite;
+}
+@keyframes blink { 50% { opacity: 0; } }
+
+#boot.fade { animation: bootFade .6s ease forwards; }
+@keyframes bootFade { to { opacity: 0; visibility: hidden; } }
+
+/* ---------- Breach takeover ---------- */
+#breach {
+  position: fixed;
+  inset: 0;
+  z-index: 4800;
+  display: grid;
+  place-items: center;
+  background: radial-gradient(ellipse at center, rgba(70, 8, 20, .97), rgba(6, 2, 6, .99));
+  overflow: hidden;
+  animation: breachIn .5s ease;
+}
+@keyframes breachIn { from { opacity: 0; } to { opacity: 1; } }
+
+#breach .scanlines {
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    rgba(244, 63, 94, .07) 0px,
+    rgba(244, 63, 94, .07) 1px,
+    transparent 1px,
+    transparent 3px
+  );
+  pointer-events: none;
+  animation: scanShift 8s linear infinite;
+}
+@keyframes scanShift { to { background-position: 0 300px; } }
+
+#breach .breach-inner {
+  position: relative;
+  text-align: center;
+  max-width: 900px;
+  padding: 0 30px;
+}
+
+#breach .skull {
+  font-size: 84px;
+  line-height: 1;
+  margin-bottom: 14px;
+  filter: drop-shadow(0 0 40px rgba(244, 63, 94, .9));
+  animation: floatSkull 3s ease-in-out infinite;
+}
+@keyframes floatSkull {
+  0%, 100% { transform: translateY(0) rotate(-2deg); }
+  50% { transform: translateY(-9px) rotate(2deg); }
+}
+
+#breach h1 {
+  font-size: clamp(38px, 7.4vw, 86px);
+  font-weight: 900;
+  letter-spacing: .06em;
+  line-height: 1.02;
+  color: #ffe4e6;
+  text-shadow:
+    0 0 22px rgba(244, 63, 94, .9),
+    0 0 70px rgba(244, 63, 94, .55),
+    3px 0 0 rgba(34, 211, 238, .65),
+    -3px 0 0 rgba(251, 191, 36, .45);
+  animation: glitchText 3.4s infinite;
+}
+@keyframes glitchText {
+  0%, 88%, 100% { transform: translate(0, 0); }
+  89% { transform: translate(-4px, 1px); }
+  90% { transform: translate(4px, -1px); }
+  91% { transform: translate(-2px, -2px); }
+  92% { transform: translate(2px, 2px); }
+  93% { transform: translate(0, 0); }
+}
+
+#breach .br-sub {
+  margin-top: 22px;
+  font-size: clamp(14px, 1.8vw, 19px);
+  color: #fda4af;
+  letter-spacing: .06em;
+  line-height: 1.7;
+}
+#breach .br-sub b { color: #ffe4e6; }
+
+#breach .br-bar {
+  margin: 34px auto 0;
+  width: min(560px, 80vw);
+  height: 7px;
+  border-radius: 99px;
+  background: rgba(244, 63, 94, .16);
+  overflow: hidden;
+  border: 1px solid rgba(244, 63, 94, .35);
+}
+#breach .br-bar > div {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, #f43f5e, #fb923c);
+  box-shadow: 0 0 18px rgba(244, 63, 94, .9);
+  transition: width .2s linear;
+}
+#breach .br-pct {
+  margin-top: 10px;
+  font-family: var(--mono);
+  font-size: 12px;
+  letter-spacing: .18em;
+  color: #fb7185;
+}
+#breach .br-btn {
+  margin-top: 32px;
+  padding: 15px 46px;
+  border-radius: 11px;
+  font-size: 13.5px;
+  font-weight: 800;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+  border: 1.5px solid rgba(251, 113, 133, .8);
+  color: #fff1f2;
+  background: linear-gradient(180deg, rgba(225, 29, 72, .9), rgba(159, 18, 57, .9));
+  box-shadow: 0 0 40px rgba(244, 63, 94, .55);
+  transition: all .18s;
+  opacity: 0;
+  pointer-events: none;
+}
+#breach .br-btn.ready { opacity: 1; pointer-events: auto; }
+#breach .br-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 0 60px rgba(244, 63, 94, .85);
+}
+#breach .br-hint {
+  margin-top: 16px;
+  font-size: 11px;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  color: rgba(253, 164, 175, .55);
+}
+
+/* ---------- Ransom note ---------- */
+.ransom {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background:
+    repeating-linear-gradient(0deg, rgba(244, 63, 94, .04) 0 1px, transparent 1px 4px),
+    #12060a;
+  padding: 24px 30px;
+  overflow-y: auto;
+}
+.ransom h1 {
+  font-family: var(--mono);
+  font-size: 26px;
+  font-weight: 900;
+  letter-spacing: .1em;
+  color: #fb7185;
+  text-shadow: 0 0 30px rgba(244, 63, 94, .7);
+  animation: glitchText 4s infinite;
+}
+.ransom .r-rule { height: 2px; background: linear-gradient(90deg, #f43f5e, transparent); margin: 14px 0 20px; }
+.ransom p {
+  font-family: var(--mono);
+  font-size: 13px;
+  line-height: 1.95;
+  color: #fda4af;
+  margin-bottom: 14px;
+  user-select: text;
+}
+.ransom p.dim { color: #9f6b78; }
+.ransom .r-box {
+  border: 1px solid rgba(244, 63, 94, .45);
+  background: rgba(244, 63, 94, .08);
+  border-radius: 9px;
+  padding: 14px 18px;
+  margin: 18px 0;
+  font-family: var(--mono);
+  font-size: 12.5px;
+  line-height: 2;
+  color: #fecdd3;
+}
+.ransom .r-box b { color: #fff1f2; }
+.ransom .r-timer {
+  font-family: var(--mono);
+  font-size: 32px;
+  font-weight: 800;
+  color: #fff1f2;
+  letter-spacing: .12em;
+  text-align: center;
+  margin: 22px 0 6px;
+  text-shadow: 0 0 40px rgba(244, 63, 94, .9);
+}
+.ransom .r-foot {
+  margin-top: auto;
+  padding-top: 20px;
+  font-size: 11px;
+  color: #7d4552;
+  font-family: var(--mono);
+  letter-spacing: .1em;
+}
+
+/* ---------- Purge / secured ---------- */
+#purge {
+  position: fixed;
+  inset: 0;
+  z-index: 4200;
+  background: #02060a;
+  font-family: var(--mono);
+  font-size: 12px;
+  line-height: 1.85;
+  padding: 34px 40px;
+  color: #4ade80;
+  overflow: hidden;
+  white-space: pre-wrap;
+}
+#purge .p-cy { color: var(--cyan); }
+#purge .p-am { color: var(--amber); }
+#purge .p-rd { color: #fb7185; }
+#purge .p-big {
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: .18em;
+  color: #fff;
+}
+
+#secureflash {
+  position: fixed;
+  inset: 0;
+  z-index: 4300;
+  background: #eafff7;
+  animation: flashOut .8s ease forwards;
+  pointer-events: none;
+}
+@keyframes flashOut { from { opacity: 1; } to { opacity: 0; } }
+
+#secured {
+  position: fixed;
+  inset: 0;
+  z-index: 4250;
+  display: grid;
+  place-items: center;
+  background: radial-gradient(ellipse at center, #052e1f, #020a08 70%);
+  text-align: center;
+  animation: securedIn .7s ease;
+}
+@keyframes securedIn { from { opacity: 0; } to { opacity: 1; } }
+#secured .s-inner { padding: 0 30px; }
+#secured .s-shield {
+  font-size: 92px;
+  line-height: 1;
+  margin-bottom: 16px;
+  filter: drop-shadow(0 0 46px rgba(52, 211, 153, .95));
+  animation: floatSkull 3.4s ease-in-out infinite;
+}
+#secured h1 {
+  font-size: clamp(40px, 7vw, 84px);
+  font-weight: 900;
+  letter-spacing: .1em;
+  color: #ecfdf5;
+  text-shadow: 0 0 30px rgba(52, 211, 153, .95), 0 0 90px rgba(52, 211, 153, .55);
+}
+#secured .s-sub {
+  margin-top: 20px;
+  font-size: clamp(13px, 1.7vw, 17px);
+  color: #6ee7b7;
+  letter-spacing: .08em;
+  line-height: 1.8;
+}
+#secured .s-stat {
+  margin: 30px auto 0;
+  display: inline-flex;
+  gap: 30px;
+  padding: 16px 30px;
+  border-radius: 12px;
+  background: rgba(52, 211, 153, .08);
+  border: 1px solid rgba(52, 211, 153, .35);
+}
+#secured .s-stat div { text-align: center; }
+#secured .s-stat .k {
+  font-size: 9.5px;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+  color: var(--txt-mute);
+  font-weight: 700;
+}
+#secured .s-stat .v {
+  font-family: var(--mono);
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--green);
+  margin-top: 5px;
+}
+#secured .s-done {
+  margin-top: 30px;
+  font-size: 11.5px;
+  letter-spacing: .2em;
+  text-transform: uppercase;
+  color: rgba(110, 231, 183, .6);
+}
+
+/* ---------- TIME UP ---------- */
+#timeup {
+  position: fixed;
+  inset: 0;
+  z-index: 4400;
+  display: grid;
+  place-items: center;
+  background: rgba(4, 6, 10, .97);
+  backdrop-filter: blur(8px);
+  text-align: center;
+}
+#timeup h1 {
+  font-size: clamp(40px, 8vw, 92px);
+  font-weight: 900;
+  letter-spacing: .12em;
+  color: #fbbf24;
+  text-shadow: 0 0 60px rgba(251, 191, 36, .8);
+}
+#timeup p { margin-top: 18px; font-size: 15px; color: var(--txt-dim); letter-spacing: .05em; }
+
+/* ---------- Scan sweep (override) ---------- */
+.scanline {
+  position: absolute;
+  left: 0; right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--cyan), transparent);
+  box-shadow: 0 0 22px var(--cyan);
+  animation: scanSweep 1.6s linear infinite;
+  pointer-events: none;
+  z-index: 6;
+}
+@keyframes scanSweep {
+  from { top: 0; opacity: 0; }
+  10% { opacity: 1; }
+  90% { opacity: 1; }
+  to { top: 100%; opacity: 0; }
+}
+
+/* ---------- Glitch stripes on infected desktop ---------- */
+body.infected #desktop::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    rgba(244, 63, 94, .035) 0 2px,
+    transparent 2px 5px
+  );
+  pointer-events: none;
+  animation: scanShift 6s linear infinite;
+  z-index: 1;
+}
+
+</style>
+<style id="gm-mode-styles" disabled>
+
+:root{
+  --bg:#070b14; --panel:#0d1421; --line:#1c2a42; --line2:#2a3d5c;
+  --txt:#d7e3f4; --dim:#8496b0; --mute:#5a6b85;
+  --cyan:#22d3ee; --green:#34d399; --amber:#fbbf24; --red:#f43f5e;
+  --mono:"Cascadia Mono","Consolas",monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{
+  font-family:"Segoe UI",system-ui,sans-serif;background:var(--bg);color:var(--txt);
+  min-height:100vh;padding:22px;
+  background-image:radial-gradient(ellipse 70% 40% at 50% 0%,rgba(34,211,238,.06),transparent 60%);
+}
+h1{font-size:20px;letter-spacing:.16em;text-transform:uppercase;color:var(--cyan);font-weight:800}
+header{display:flex;align-items:center;gap:14px;margin-bottom:20px;flex-wrap:wrap}
+header .sub{font-size:12px;color:var(--mute)}
+.spacer{flex:1}
+.grid{display:grid;grid-template-columns:1.15fr 1fr;gap:16px;align-items:start}
+@media(max-width:900px){.grid{grid-template-columns:1fr}}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px 20px}
+.card h2{font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--mute);margin-bottom:14px;font-weight:800}
+.timer{font-family:var(--mono);font-size:72px;font-weight:800;line-height:1;text-align:center;letter-spacing:.04em;color:var(--txt);transition:color .3s}
+.timer.warn{color:var(--amber)}
+.timer.crit{color:var(--red);animation:pulse 1s infinite}
+@keyframes pulse{50%{opacity:.45}}
+.timer-row{display:flex;gap:9px;margin-top:18px;justify-content:center;flex-wrap:wrap}
+button{
+  font-family:inherit;font-size:12px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;
+  padding:11px 20px;border-radius:9px;border:1px solid var(--line2);background:rgba(255,255,255,.04);
+  color:var(--dim);cursor:pointer;transition:.15s;
+}
+button:hover{background:rgba(255,255,255,.09);color:var(--txt)}
+button.primary{background:linear-gradient(180deg,#0891b2,#0e7490);border-color:var(--cyan);color:#ecfeff;box-shadow:0 0 18px rgba(34,211,238,.28)}
+button.primary:hover{box-shadow:0 0 28px rgba(34,211,238,.5)}
+button.danger{background:linear-gradient(180deg,#e11d48,#9f1239);border-color:#fb7185;color:#fff1f2}
+button:disabled{opacity:.3;cursor:not-allowed;box-shadow:none}
+.runner{display:grid;grid-template-columns:1fr auto auto;gap:9px;align-items:center;padding:10px 0;border-bottom:1px solid rgba(28,42,66,.6)}
+.runner:last-child{border-bottom:0}
+.runner .rname{font-size:13px;font-weight:600}
+.runner .rscore{font-family:var(--mono);font-size:12px;color:var(--dim)}
+.freeze-btn{padding:8px 14px;font-size:10.5px;background:rgba(244,63,94,.12);border-color:rgba(244,63,94,.45);color:#fda4af}
+.freeze-btn:hover{background:rgba(244,63,94,.24)}
+.score{display:flex;justify-content:space-between;align-items:baseline;padding:9px 0;border-bottom:1px solid rgba(28,42,66,.5);font-size:13px}
+.score:last-child{border-bottom:0}
+.score b{font-family:var(--mono);color:var(--cyan);font-size:15px}
+.score.neg b{color:var(--red)}
+.pill{display:inline-block;padding:3px 11px;border-radius:99px;font-size:10px;font-weight:800;letter-spacing:.1em;text-transform:uppercase}
+.pill.on{background:rgba(52,211,153,.15);border:1px solid rgba(52,211,153,.45);color:#6ee7b7}
+.pill.off{background:rgba(244,63,94,.13);border:1px solid rgba(244,63,94,.4);color:#fda4af}
+.hintline{display:flex;justify-content:space-between;padding:8px 0;font-size:12.5px;border-bottom:1px solid rgba(28,42,66,.5)}
+.hintline:last-child{border-bottom:0}
+.hintline .k{color:var(--dim)}
+.hintline .v{font-family:var(--mono);color:var(--green);font-weight:700}
+#gate{position:fixed;inset:0;background:#05080f;display:grid;place-items:center;z-index:99}
+#gate .box{width:340px;background:var(--panel);border:1px solid var(--line2);border-radius:16px;padding:32px 28px;text-align:center}
+#gate h2{font-size:13px;letter-spacing:.2em;text-transform:uppercase;color:var(--cyan);margin-bottom:6px}
+#gate p{font-size:11.5px;color:var(--mute);margin-bottom:20px}
+#gate input{width:100%;padding:13px;border-radius:9px;background:#050a13;border:1px solid var(--line2);color:var(--cyan);font-family:var(--mono);font-size:16px;letter-spacing:.2em;text-align:center;outline:none}
+#gate input:focus{border-color:var(--cyan)}
+#gate button{margin-top:13px;width:100%}
+.log{font-family:var(--mono);font-size:11px;line-height:1.8;color:var(--mute);max-height:170px;overflow-y:auto;background:#050a13;border:1px solid var(--line);border-radius:9px;padding:11px 14px}
+.log div.hi{color:var(--green)}
+.log div.bad{color:#fb7185}
+.keytable{width:100%;font-size:12px;border-collapse:collapse}
+.keytable td{padding:6px 0;border-bottom:1px solid rgba(28,42,66,.5)}
+.keytable td:first-child{color:var(--dim)}
+.keytable td:last-child{font-family:var(--mono);color:var(--green);font-weight:700;text-align:right}
+
+</style>
+</head>
+<body>
+
+
+
+<!-- ============ BOOT ============ -->
+<div id="boot"></div>
+
+<!-- ============ BREACH TAKEOVER ============ -->
+<div id="breach" class="hidden"></div>
+
+<!-- ============ DESKTOP ============ -->
+<div id="desktop">
+  <div id="grid"></div>
+
+  <div id="statusbar">
+    <span class="sb-brand" id="sb-brand">CYBEROPS-01</span>
+    <span class="sb-threat" id="sb-threat">THREAT ACTIVE</span>
+    <span id="hintpips"></span>
+    <span class="sb-spacer"></span>
+    <span id="clock">--:--</span>
+  </div>
+
+  <div id="icons"></div>
+
+  <div id="hintbar"></div>
+  <div id="toasts"></div>
+
+  <div id="taskbar">
+    <div id="tasklist"></div>
+  </div>
+</div>
+
+<!-- ============ HINT CARD ============ -->
+<div id="hintcard">
+  <div class="hc-kick">⚠ suspicious line identified</div>
+  <div class="hc-title">FAKE URGENCY</div>
+  <div class="hc-src" style="font-size:11.5px;color:var(--txt-mute);letter-spacing:.08em;text-transform:uppercase"></div>
+  <div class="hc-sub">This is the trick used in this message.</div>
+  <div class="hc-runner">
+    Runner — find the box with this word on the lid:
+    <b>"FAKE URGENCY"</b>
+  </div>
+  <div class="hc-close">click anywhere to close</div>
+</div>
+
+<!-- ============ FREEZE OVERLAY ============ -->
+<div id="freeze" class="hidden">
+  <div>
+    <div class="fz-ico">🧊</div>
+    <h1>FREEZE</h1>
+    <div class="fz-sub">decoy box opened — −2 points</div>
+    <div class="fz-count">15</div>
+  </div>
+</div>
+
+<!-- ============ PURGE / SECURED ============ -->
+<div id="purge" class="hidden"></div>
+<div id="secureflash" class="hidden"></div>
+
+<div id="secured" class="hidden">
+  <div class="s-inner">
+    <div class="s-shield">🛡</div>
+    <h1>SYSTEM SECURED</h1>
+    <div class="s-sub">
+      Virus neutralised. All files restored. Persistence removed.
+    </div>
+    <div class="s-stat">
+      <div><div class="k">Files restored</div><div class="v">11,597</div></div>
+      <div><div class="k">Threats removed</div><div class="v">2</div></div>
+      <div><div class="k">Status</div><div class="v">CLEAN</div></div>
+    </div>
+    <div class="s-done">Checkpoint complete — report to your facilitator</div>
+  </div>
+</div>
+
+<!-- ============ TIME UP ============ -->
+<div id="timeup" class="hidden">
+  <div>
+    <h1>TIME UP</h1>
+    <p>Stop what you are doing and report to your facilitator.</p>
+  </div>
+</div>
+
+
+
+<!-- ============ GM CONSOLE (hidden unless #gm) ============ -->
+<div id="gm-root" style="display:none">
+
+
+<div id="gate">
+  <div class="box">
+    <h2>GM Console</h2>
+    <p>Facilitator access only</p>
+    <input type="password" id="gatePass" placeholder="PASSPHRASE" autocomplete="off" />
+    <button class="primary" id="gateBtn">Unlock</button>
+  </div>
+</div>
+
+<div id="app" style="display:none">
+  <header>
+    <h1>Firewall Breach</h1>
+    <span class="sub">Checkpoint 4 · GM console</span>
+    <span class="spacer"></span>
+    <span class="pill off" id="statePill">IDLE</span>
+  </header>
+
+  <div class="grid">
+
+    <!-- LEFT -->
+    <div style="display:flex;flex-direction:column;gap:16px">
+
+      <div class="card">
+        <h2>Master timer</h2>
+        <div class="timer" id="clock">15:00</div>
+        <div class="timer-row">
+          <button class="primary" id="btnStart">Start</button>
+          <button id="btnPause">Pause</button>
+          <button id="btnEnd">End round</button>
+          <button class="danger" id="btnReset">Reset all</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Field agents — decoy penalty</h2>
+        <div id="runners"></div>
+        <div style="margin-top:12px;display:flex;gap:9px">
+          <input id="newRunner" placeholder="Add runner name" style="flex:1;padding:10px 12px;border-radius:8px;background:#050a13;border:1px solid var(--line2);color:var(--txt);font-size:12.5px;outline:none" />
+          <button id="addRunner">Add</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Scoring</h2>
+        <div class="score"><span>Base score</span><b id="sBase">100</b></div>
+        <div class="score"><span>Decoy penalties</span><b id="sPen">0</b></div>
+        <div class="score"><span>Accuracy deductions</span><b id="sAcc">0</b></div>
+        <div class="score"><span><b style="color:var(--txt);font-family:inherit;font-size:13px">Final score</b></span><b id="sFinal">100</b></div>
+        <div style="margin-top:12px;display:flex;gap:9px;flex-wrap:wrap">
+          <button id="btnMinus2">−2 accuracy</button>
+          <button id="btnPlus2">+2 accuracy</button>
+          <button id="btnForceSecure">Force secured</button>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- RIGHT -->
+    <div style="display:flex;flex-direction:column;gap:16px">
+
+      <div class="card">
+        <h2>Answer key</h2>
+        <table class="keytable">
+          <tr><td>FAKE URGENCY</td><td>Mail → box lid</td></tr>
+          <tr><td>ASKING FOR PASSWORD</td><td>ChatX → box lid</td></tr>
+          <tr><td>FAKE SENDER</td><td>ChatX → box lid</td></tr>
+          <tr><td>Fragments (box backs)</td><td id="kFrag">FRM · 26 · XP</td></tr>
+          <tr><td>Override code</td><td id="kCode">FRM-26-XP</td></tr>
+        </table>
+        <p style="font-size:11px;color:var(--mute);margin-top:12px;line-height:1.7">
+          6 real boxes (each hint on 2 boxes) + 5 decoys. Decoy backs read “VOID — WRONG BOX”.
+        </p>
+      </div>
+
+      <div class="card">
+        <h2>Live status</h2>
+        <div id="statusLines"></div>
+      </div>
+
+      <div class="card">
+        <h2>Event log</h2>
+        <div class="log" id="log"></div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+
+</div>
+
+<script>
+(function(){
+"use strict";
+
+/* ---- game ---- */
+/* ============================================================
+   FIREWALL BREACH OPS - Icons (inline SVG)
+   ============================================================ */
+const Icons = {
+  mail: `<svg viewBox="0 0 24 24" fill="none" stroke="#22d3ee" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2.5"/><path d="m2.5 7 8.4 6a2 2 0 0 0 2.2 0l8.4-6"/></svg>`,
+  chat: `<svg viewBox="0 0 24 24" fill="none" stroke="#34d399" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 9 9 0 0 1-3.9-.9L3 21l1.9-4.9A8.4 8.4 0 0 1 12 3.1a8.4 8.4 0 0 1 9 8.4Z"/></svg>`,
+  override: `<svg viewBox="0 0 24 24" fill="none" stroke="#a78bfa" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.5 3.5 6.6v5.1c0 4.6 3.4 8.9 8.5 9.8 5.1-.9 8.5-5.2 8.5-9.8V6.6Z"/><path d="m8.8 12 2.3 2.3 4.4-4.4"/></svg>`,
+  files: `<svg viewBox="0 0 24 24" fill="none" stroke="#fbbf24" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7.5A2 2 0 0 1 5 5.5h3.6a2 2 0 0 1 1.5.7l1 1.3H19a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/></svg>`,
+  notepad: `<svg viewBox="0 0 24 24" fill="none" stroke="#cbd5e1" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="4.5" y="2.5" width="15" height="19" rx="2"/><path d="M8 7.5h8M8 12h8M8 16.5h5"/></svg>`,
+  taskmgr: `<svg viewBox="0 0 24 24" fill="none" stroke="#f472b6" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="3.5" width="19" height="13" rx="2"/><path d="M7 12.5l2.6-3.8 2.4 4.6 2.2-6 2.3 5.2"/><path d="M8 20.5h8"/></svg>`,
+  settings: `<svg viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3.2"/><path d="M19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-1.8-.3 1.6 1.6 0 0 0-1 1.5v.2a2 2 0 1 1-4 0v-.1a1.6 1.6 0 0 0-1-1.5 1.6 1.6 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.6 1.6 0 0 0 .3-1.8 1.6 1.6 0 0 0-1.5-1H2a2 2 0 1 1 0-4h.1a1.6 1.6 0 0 0 1.5-1 1.6 1.6 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.6 1.6 0 0 0 1.8.3H8a1.6 1.6 0 0 0 1-1.5V2a2 2 0 1 1 4 0v.1a1.6 1.6 0 0 0 1 1.5 1.6 1.6 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.6 1.6 0 0 0-.3 1.8V8a1.6 1.6 0 0 0 1.5 1h.2a2 2 0 1 1 0 4h-.1a1.6 1.6 0 0 0-1.5 1Z"/></svg>`,
+  file: `<svg viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2.5H7a2 2 0 0 0-2 2v15a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7.5Z"/><path d="M14 2.5v5h5"/></svg>`,
+  exe: `<svg viewBox="0 0 24 24" fill="none" stroke="#f43f5e" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2.5H7a2 2 0 0 0-2 2v15a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7.5Z"/><path d="M14 2.5v5h5"/><path d="M9.5 13.5 12 11l2.5 2.5M12 11v6"/></svg>`,
+  folder: `<svg viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7.5A2 2 0 0 1 5 5.5h3.6a2 2 0 0 1 1.5.7l1 1.3H19a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/></svg>`,
+  lock: `<svg viewBox="0 0 24 24" fill="none" stroke="#fbbf24" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="4.5" y="10.5" width="15" height="11" rx="2"/><path d="M8 10.5V7a4 4 0 0 1 8 0v3.5"/></svg>`,
+  min: `<svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M2.5 6h7"/></svg>`,
+  max: `<svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="2.5" y="2.5" width="7" height="7" rx="1"/></svg>`,
+  close: `<svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.7"><path d="m2.5 2.5 7 7M9.5 2.5l-7 7"/></svg>`,
+  search: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m16.5 16.5 4 4"/></svg>`
+};
+
+
+/* ============================================================
+   FIREWALL BREACH OPS - Answer key + content
+   NOTE: hints are meant to be found on screen. Fragments are
+   ord() obfuscated so a curious analyst cannot read them in
+   DevTools. Keep this file out of the offline dist.
+   ============================================================ */
+
+const O = (arr) => arr.map(c => String.fromCharCode(c)).join("");
+
+const GameData = {
+  /* --- physical key --- */
+  fragments: [O([70, 82, 77]), O([50, 54]), O([88, 80])],       // FRM / 26 / XP
+  overrideCode: O([70, 82, 77, 45, 50, 54, 45, 88, 80]),         // FRM-26-XP
+
+  /* three real hint words -> these are printed on the box lids */
+  hintKey: [
+    { hint: "FAKE URGENCY",         source: "mail", id: "m1" },
+    { hint: "ASKING FOR PASSWORD",  source: "chat", id: "c1" },
+    { hint: "FAKE SENDER",          source: "chat", id: "c2" }
+  ],
+
+  /* ---------------- MAIL ---------------- */
+  mails: [
+    {
+      id: "m1",
+      from: "accounts@maybank-secure-verify.com",
+      fromName: "Maybank Security",
+      subject: "URGENT: Your account will be suspended in 2 hours",
+      time: "08:14",
+      flagged: true,
+      flagText: "Unverified sender domain",
+      body: [
+        `Dear Valued Customer,`,
+        `We have detected unusual activity on your Maybank account. To protect your funds, your online banking access has been temporarily LIMITED.`,
+        { cls: "trap", hint: "FAKE URGENCY", text: `Please respond with your updated banking information before 2PM or your account will be permanently closed.` },
+        `Failure to verify within the given time will result in permanent suspension of your account and any remaining balance may be frozen for up to 90 days.`,
+        `We apologise for any inconvenience caused and appreciate your prompt cooperation.`,
+      ],
+      sig: `Maybank Customer Security Team\nsecurity@maybank-secure-verify.com\nThis is an automated message. Please do not reply directly.`
+    },
+    {
+      id: "m2",
+      from: "invoice@globalship.com",
+      fromName: "GlobalShip Billing",
+      subject: "Invoice #4471 — February shipment",
+      time: "07:52",
+      body: [
+        `Hi team,`,
+        `Please find the summary of Invoice <b>#4471</b> for the February shipment below. The PDF copy has been attached to this message for your records.`,
+        `<div style="background:#0d1626;border:1px solid #1f2c44;border-radius:8px;padding:12px 16px;font-family:Consolas,monospace;font-size:12.5px;line-height:1.9;margin:14px 0;">
+        Invoice No. : 4471<br>
+        Date        : 12 February 2026<br>
+        Waybill     : GS-88214-MY<br>
+        Route       : Port Klang &rarr; Penang<br>
+        Freight     : RM 1,840.00<br>
+        Handling    : RM   120.00<br>
+        Insurance   : RM    95.00<br>
+        <span style="color:#34d399">Total due   : RM 2,055.00</span><br>
+        Payment due : 28 February 2026</div>`,
+        `Payment is due by 28 February 2026 as per our standard 14-day terms. Our bank details are unchanged from previous invoices — please contact billing directly if you need them re-issued.`,
+        `Let us know if you need the customs declaration attached as well.`,
+      ],
+      sig: `Best regards,\nNurul Huda\nBilling Executive, GlobalShip Logistics\ninvoice@globalship.com`
+    },
+    {
+      id: "m3",
+      from: "hr@company.com",
+      fromName: "Human Resources",
+      subject: "Updated leave policy 2026 — effective 1 March",
+      time: "Yesterday",
+      body: [
+        `Dear colleagues,`,
+        `Following the review by the People Committee last month, we are updating our annual leave policy effective <b>1 March 2026</b>. The main changes are summarised below.`,
+        `<b>1. Leave carry-forward</b><br>Unused annual leave may now be carried forward up to a maximum of 8 days into the following calendar year. Previously this was 5 days. Carried-forward days must be used before 30 June.`,
+        `<b>2. Compassionate leave</b><br>Compassionate leave has been increased from 3 to 5 working days per calendar year, covering immediate family members. Supporting documentation is required for absences longer than 2 days.`,
+        `<b>3. Replacement leave</b><br>Where an employee is required to work on a gazetted public holiday, replacement leave must be applied for within 60 days of the date worked, not 30 days as previously stated.`,
+        `All requests still go through the HR portal under <i>My Leave &rarr; New Application</i>. Balances as of 31 December 2025 have been migrated automatically, so there is no action needed on your side.`,
+        `If you have questions, drop by the HR counter on level 3 or reply to this email.`,
+      ],
+      sig: `Regards,\nFarah Idris\nHuman Resources Department\nhr@company.com`
+    },
+    {
+      id: "m4",
+      from: "noreply@lms.edu",
+      fromName: "Learning Portal",
+      subject: "Assignment deadline extended to 20 February",
+      time: "Yesterday",
+      body: [
+        `Dear student,`,
+        `Following several requests from the cohort, the submission deadline for <b>Assignment 2 &mdash; Network Fundamentals</b> has been extended.`,
+        `<div style="background:#0d1626;border:1px solid #1f2c44;border-radius:8px;padding:12px 16px;font-family:Consolas,monospace;font-size:12.5px;line-height:1.9;margin:14px 0;">
+        Module      : Network Fundamentals<br>
+        Assignment  : Assignment 2<br>
+        Old due     : 15 February 2026, 23:59<br>
+        <span style="color:#34d399">New due     : 20 February 2026, 23:59</span><br>
+        Submission  : Learning Portal &rarr; Assessments</div>`,
+        `Late submissions will still be accepted up to 48 hours after the new deadline with a 10% penalty per day, as stated in the module handbook.`,
+        `Please note that the extension applies to Assignment 2 only. The lab report deadline is unchanged.`,
+      ],
+      sig: `This is an automated message from the Learning Portal.\nDo not reply to this address.`
+    },
+    {
+      id: "m5",
+      from: "team@company.com",
+      fromName: "Aiman Rahman",
+      subject: "Friday lunch — vote for venue",
+      time: "Yesterday",
+      body: [
+        `Oi everyone,`,
+        `Friday lunch is on the company card this month (yes, really). I've shortlisted four places within walking distance. Reply with a number by Thursday 5pm so I can book.`,
+        `<div style="background:#0d1626;border:1px solid #1f2c44;border-radius:8px;padding:12px 16px;font-size:13px;line-height:2;margin:14px 0;">
+        <b>1.</b> Nasi Kandar Pelita &mdash; cheap, fast, always open<br>
+        <b>2.</b> The Banana Leaf &mdash; good for a big group, a bit loud<br>
+        <b>3.</b> Sakura Sushi &mdash; slightly over budget but worth it<br>
+        <b>4.</b> Warung Pak Din &mdash; 10 min walk, best curry in the area</div>`,
+        `Current votes: 1 &rarr; 2 people, 2 &rarr; 3 people, 3 &rarr; 1 person, 4 &rarr; 4 people. Looks like Pak Din is winning but it's close.`,
+        `Also — someone left a black umbrella in the pantry since Monday. It's leaning against the fridge. Come get it before it becomes office property.`,
+      ],
+      sig: `Aiman\nQA Team`
+    },
+    {
+      id: "m6",
+      from: "it-support@company.com",
+      fromName: "IT Support",
+      subject: "Scheduled maintenance Saturday 22 Feb, 1am–4am",
+      time: "Mon",
+      body: [
+        `Dear all,`,
+        `We will be performing scheduled maintenance on the internal file server and VPN gateway this Saturday from <b>1:00am to 4:00am</b>. During this window, access to shared drives and remote login may be unavailable.`,
+        `Email, chat and printing will not be affected.`,
+        `<b>A reminder about account safety:</b><br>IT Support will <b>never</b> ask you for your password, your one-time code, or ask you to click a link to "verify" your account. If anyone contacts you claiming to be from IT and asks for those things, it is not us — report it and do not reply.`,
+        `If you experience issues after 4:00am on Saturday, please raise a ticket through the helpdesk portal rather than replying to this email.`,
+      ],
+      sig: `IT Support Team\nit-support@company.com\nExt. 4412`
+    }
+  ],
+
+  /* ---------------- CHATX ---------------- */
+  chats: [
+    {
+      id: "c1",
+      name: "Unknown",
+      sub: "+60 12-889-4413 · not in your contacts",
+      warn: true,
+      tag: "NEW",
+      preview: "Hi, this is Maybank. We detected a problem…",
+      messages: [
+        { who: "them", t: "08:02", text: "Good morning, is this Mr. Danial?" },
+        { who: "me",   t: "08:05", text: "Who is this?" },
+        { who: "them", t: "08:06", text: "This is Maybank Customer Security. We detected a problem with your account this morning. Someone attempted a transfer of RM 4,300." },
+        { who: "me",   t: "08:07", text: "What? I didn't do any transfer" },
+        { who: "them", t: "08:07", text: "We know. That is why we are contacting you. We have blocked it for now." },
+        { who: "them", t: "08:08", text: "To confirm the block, we need to verify your identity. An OTP has been sent to your phone.", trap: true, hint: "ASKING FOR PASSWORD", text: "Send us the 6-digit code we just SMSed you so we can cancel the transfer." },
+        { who: "them", t: "08:08", text: "Please hurry, the transfer will be released in 10 minutes." },
+        { who: "them", t: "08:09", text: "Sir? Are you there?" }
+      ]
+    },
+    {
+      id: "c2",
+      name: "Aina (Boss)",
+      sub: "+60 19-772-1104 · number differs from saved contact",
+      warn: true,
+      tag: "NEW NUMBER",
+      preview: "Hi it's me, I changed my number…",
+      messages: [
+        { who: "sys", t: "", text: "This contact matches a name in your phonebook but the number is not saved" },
+        { who: "them", t: "10:41", text: "Hi, it's me. I dropped my phone in the sink so this is my new number. Please save it." },
+        { who: "me",   t: "10:48", text: "Oh no, are you okay? Noted!" },
+        { who: "them", t: "10:49", text: "Fine fine. Listen, I'm in a meeting until 12 so I can't take calls." },
+        { who: "them", t: "10:50", text: "Can you help me settle something small? The courier is holding a package for me at the office lobby and wants RM 2 for the delivery fee." },
+        { who: "them", t: "10:50", text: "Just pay at this link, it's faster than waiting for me.", trap: true, hint: "FAKE SENDER", text: "homerr-clone.site/track — pay RM 2 and it will release the parcel." },
+        { who: "them", t: "10:52", text: "Please do it now, the courier is waiting outside. I'll pay you back." },
+        { who: "them", t: "10:55", text: "Hello?" }
+      ]
+    },
+    {
+      id: "c3",
+      name: "Sarah (IT)",
+      sub: "Ext. 4412 · internal",
+      preview: "Hey, are you at your desk? We saw something…",
+      messages: [
+        { who: "them", t: "08:20", text: "Hey, are you at your desk? We saw something weird on your account this morning." },
+        { who: "me",   t: "08:24", text: "Yeah I'm here. Weird how?" },
+        { who: "them", t: "08:24", text: "A login from an IP address we don't recognise, about 3am. Then a bunch of files got touched." },
+        { who: "me",   t: "08:25", text: "That wasn't me, I was asleep" },
+        { who: "them", t: "08:26", text: "I know. Just be careful — there's been a wave of messages going around this morning. People getting texts and emails pretending to be the bank, the boss, the courier. All different." },
+        { who: "them", t: "08:27", text: "Whatever you do, don't share codes and don't click any payment links. We'll handle the account on our side." },
+        { who: "me",   t: "08:28", text: "Okay. So what do I do?" },
+        { who: "them", t: "08:29", text: "Read through everything you've got this morning. Mail and chat. Somewhere in there is the thing that started it. Find what's wrong, then come tell me what you found." },
+        { who: "them", t: "08:30", text: "And don't delete anything. I need the evidence." }
+      ]
+    },
+    {
+      id: "c4",
+      name: "Class Group",
+      sub: "12 members",
+      preview: "photo_caption: kantin again 😭",
+      messages: [
+        { who: "sys", t: "", text: "+3 messages from earlier" },
+        { who: "them", t: "09:12", text: "who took the photo during lab just now 😭", sender: "Haziq" },
+        { who: "them", t: "09:12", text: "kantin again 😭", sender: "Haziq" },
+        { who: "them", t: "09:13", text: "that's food not lab work hahaha", sender: "Mei Ling" },
+        { who: "them", t: "09:14", text: "guys when is the lab report due again", sender: "Afif" },
+        { who: "me",   t: "09:15", text: "20th, they extended it" },
+        { who: "them", t: "09:15", text: "BLESS 🙏", sender: "Afif" },
+        { who: "them", t: "09:16", text: "anyone going to the printing shop later? need to print the appendix", sender: "Mei Ling" },
+        { who: "me",   t: "09:18", text: "maybe after lunch" },
+        { who: "them", t: "09:19", text: "ok let me know, I'll follow", sender: "Mei Ling" },
+        { who: "them", t: "09:21", text: "btw did anyone else get a weird email this morning saying their account is suspended", sender: "Afif" },
+        { who: "them", t: "09:21", text: "I got one too, deleted it already", sender: "Haziq" }
+      ]
+    },
+    {
+      id: "c5",
+      name: "Delivery Co.",
+      sub: "Nationwide Express · verified",
+      preview: "Your parcel MY8821457 has been delivered…",
+      messages: [
+        { who: "sys", t: "", text: "Verified business account" },
+        { who: "them", t: "07:40", text: "Good morning. Your parcel from Shopee is out for delivery today." },
+        { who: "them", t: "07:40", text: "Tracking: MY8821457\nCourier: Nationwide Express\nETA: between 10:00 and 14:00" },
+        { who: "me",   t: "07:55", text: "Thanks, I'll be home" },
+        { who: "them", t: "11:32", text: "Your parcel has been delivered. Signed by: DANIAL" },
+        { who: "them", t: "11:32", text: "If this was not you, reply to this message and we will open a case. Do not pay any fee requested by third parties claiming to be us." }
+      ]
+    }
+  ],
+
+  /* ---------------- FILES ---------------- */
+  files: {
+    Desktop: [
+      { name: "RANSOM_NOTE.txt", icon: "file", open: "ransom" },
+      { name: "TO-DO.txt", icon: "file", open: "todo" },
+      { name: "Inbox", icon: "folder", open: "Inbox" },
+      { name: "Documents", icon: "folder", open: "Documents" },
+      { name: "Downloads", icon: "folder", open: "Downloads" }
+    ],
+    Documents: [
+      { name: "StaffHandbook_2026.pdf", icon: "file" },
+      { name: "Budget_Q1.xlsx", icon: "file" },
+      { name: "MeetingNotes_Feb.docx", icon: "file" }
+    ],
+    Downloads: [
+      { name: "invoice_4471.pdf.exe", icon: "exe", sus: true },
+      { name: "setup_chrome_update.exe", icon: "exe" },
+      { name: "photo_2026.zip", icon: "file" }
+    ],
+    Inbox: [
+      { name: "Email Backup (4).txt", icon: "file" },
+      { name: "Email Backup (3).txt", icon: "file" }
+    ]
+  },
+
+  notes: {
+    todo: `TO-DO — this week\n\n[x] Submit timesheet\n[x] Renew laptop antivirus\n[ ] Reply to GlobalShip invoice\n[ ] Dentist Friday 3pm\n[ ] Fix the printer in pantry (again)\n[ ] Ask IT why my laptop is so slow\n\n\nnever mind any of that now i guess`,
+    ransom: null
+  },
+
+  processes: [
+    { name: "System Idle Process", cpu: "78%", mem: "8 K", pid: 0 },
+    { name: "explorer.exe", cpu: "2%", mem: "84,320 K", pid: 4021 },
+    { name: "dwm.exe", cpu: "1%", mem: "45,110 K", pid: 1180 },
+    { name: "svchost.exe", cpu: "0%", mem: "12,884 K", pid: 992 },
+    { name: "chrome.exe", cpu: "4%", mem: "312,440 K", pid: 7712 },
+    { name: "OUTLOOK.EXE", cpu: "1%", mem: "128,900 K", pid: 6634 },
+    { name: "ChatX.exe", cpu: "2%", mem: "96,220 K", pid: 6891 },
+    { name: "NOTMALWARE.exe", cpu: "41%", mem: "666,666 K", pid: 1337, sus: true },
+    { name: "locker.sys", cpu: "6%", mem: "1,024 K", pid: 1777, sus: true }
+  ]
+};
+
+
+/* ============================================================
+   FIREWALL BREACH OPS - Window Manager
+   ============================================================ */
+
+const WM = (() => {
+  let zTop = 100;
+  const open = new Map();
+  let cascade = 0;
+
+  function el(html) {
+    const d = document.createElement("div");
+    d.innerHTML = html.trim();
+    return d.firstElementChild;
+  }
+
+  function create({ id, title, icon, width = 780, height = 540, x, y, resizable = true, onClose, bodyClass = "" }) {
+    if (open.has(id)) {
+      const w = open.get(id);
+      w.classList.remove("hidden");
+      focus(w);
+      return w.querySelector(".winbody");
+    }
+
+    const desk = document.getElementById("desktop");
+    const dw = desk.clientWidth;
+    const dh = desk.clientHeight - 48;
+
+    const w = width > dw - 80 ? dw - 60 : width;
+    const h = height > dh - 80 ? dh - 60 : height;
+
+    cascade = (cascade + 1) % 7;
+    const px = x != null ? x : Math.max(40, Math.round((dw - w) / 2) - 40 + cascade * 26);
+    const py = y != null ? y : Math.max(44, Math.round((dh - h) / 2) - 20 + cascade * 22);
+
+    const node = el(`
+      <div class="win" id="win-${id}" style="left:${px}px;top:${py}px;width:${w}px;height:${h}px">
+        <div class="titlebar">
+          ${icon || ""}
+          <h2>${title}</h2>
+          <div class="winbtns">
+            <button class="min" title="Minimize">${Icons.min}</button>
+            <button class="max" title="Maximize">${Icons.max}</button>
+            <button class="close" title="Close">${Icons.close}</button>
+          </div>
+        </div>
+        <div class="winbody ${bodyClass}"></div>
+        ${resizable ? '<div class="resize"></div>' : ""}
+      </div>
+    `);
+
+    desk.appendChild(node);
+    open.set(id, node);
+
+    const bar = node.querySelector(".titlebar");
+    const body = node.querySelector(".winbody");
+
+    /* focus on any click */
+    node.addEventListener("mousedown", () => focus(node), true);
+
+    /* buttons */
+    node.querySelector(".close").addEventListener("click", (e) => {
+      e.stopPropagation();
+      close(id);
+      onClose && onClose();
+    });
+    node.querySelector(".min").addEventListener("click", (e) => {
+      e.stopPropagation();
+      node.classList.add("hidden");
+      Taskbar.sync();
+    });
+    node.querySelector(".max").addEventListener("click", (e) => {
+      e.stopPropagation();
+      if (node.dataset.max === "1") {
+        Object.assign(node.style, JSON.parse(node.dataset.prev));
+        node.dataset.max = "0";
+      } else {
+        node.dataset.prev = JSON.stringify({ left: node.style.left, top: node.style.top, width: node.style.width, height: node.style.height });
+        Object.assign(node.style, { left: "0px", top: "0px", width: dw + "px", height: dh + "px" });
+        node.dataset.max = "1";
+      }
+    });
+
+    /* drag */
+    let drag = null;
+    bar.addEventListener("mousedown", (e) => {
+      if (e.target.closest(".winbtns")) return;
+      if (node.dataset.max === "1") return;
+      drag = { dx: e.clientX - node.offsetLeft, dy: e.clientY - node.offsetTop };
+      document.body.style.userSelect = "none";
+    });
+    document.addEventListener("mousemove", (e) => {
+      if (!drag) return;
+      node.style.left = Math.max(-node.offsetWidth + 120, Math.min(dw - 80, e.clientX - drag.dx)) + "px";
+      node.style.top = Math.max(34, Math.min(dh - 40, e.clientY - drag.dy)) + "px";
+    });
+    document.addEventListener("mouseup", () => {
+      if (drag) { drag = null; document.body.style.userSelect = ""; }
+    });
+
+    /* resize */
+    const rz = node.querySelector(".resize");
+    if (rz) {
+      let rs = null;
+      rz.addEventListener("mousedown", (e) => {
+        e.stopPropagation();
+        rs = { x: e.clientX, y: e.clientY, w: node.offsetWidth, h: node.offsetHeight };
+        document.body.style.userSelect = "none";
+      });
+      document.addEventListener("mousemove", (e) => {
+        if (!rs) return;
+        node.style.width = Math.max(340, rs.w + e.clientX - rs.x) + "px";
+        node.style.height = Math.max(220, rs.h + e.clientY - rs.y) + "px";
+      });
+      document.addEventListener("mouseup", () => {
+        if (rs) { rs = null; document.body.style.userSelect = ""; }
+      });
+    }
+
+    focus(node);
+    Taskbar.sync();
+    return body;
+  }
+
+  function focus(node) {
+    document.querySelectorAll(".win").forEach((w) => w.classList.remove("focused"));
+    node.classList.add("focused");
+    node.style.zIndex = ++zTop;
+    Taskbar.sync();
+    return;
+  }
+
+  function close(id) {
+    const node = open.get(id);
+    if (!node) return;
+    node.classList.add("closing");
+    setTimeout(() => node.remove(), 140);
+    open.delete(id);
+    Taskbar.sync();
+  }
+
+  function exists(id) { return open.has(id); }
+  function node(id) { return open.get(id); }
+
+  function minimizeAll() {
+    open.forEach((n) => n.classList.add("hidden"));
+    Taskbar.sync();
+  }
+
+  return { create, focus, close, exists, node, minimizeAll, list: open };
+})();
+
+/* ---------- Taskbar ---------- */
+const Taskbar = (() => {
+  const titles = {};
+
+  function register(id, title, icon) {
+    titles[id] = { title, icon };
+  }
+
+  function sync() {
+    const list = document.getElementById("tasklist");
+    const openIds = [...WM.list.keys()];
+    list.innerHTML = "";
+
+    openIds.forEach((id) => {
+      const meta = titles[id] || { title: id, icon: "" };
+      const node = WM.list.get(id);
+      const active = !node.classList.contains("hidden") && node.classList.contains("focused");
+      const btn = document.createElement("button");
+      btn.className = "taskbtn" + (active ? " active" : "");
+      btn.innerHTML = `${meta.icon || ""}<span>${meta.title}</span>`;
+      btn.addEventListener("click", () => {
+        if (node.classList.contains("hidden")) {
+          node.classList.remove("hidden");
+          WM.focus(node);
+        } else if (node.classList.contains("focused")) {
+          node.classList.add("hidden");
+          sync();
+        } else {
+          WM.focus(node);
+        }
+      });
+      list.appendChild(btn);
+    });
+  }
+
+  return { register, sync };
+})();
+
+
+/* ============================================================
+   FIREWALL BREACH OPS - Shared UI helpers + hint engine
+   ============================================================ */
+
+const UI = (() => {
+  function toast(msg, type = "", ms = 2600) {
+    const box = document.getElementById("toasts");
+    const t = document.createElement("div");
+    t.className = "toast " + type;
+    t.textContent = msg;
+    box.appendChild(t);
+    setTimeout(() => {
+      t.classList.add("out");
+      setTimeout(() => t.remove(), 260);
+    }, ms);
+  }
+  return { toast };
+})();
+
+/* ============================================================
+   Hint engine
+   - click a suspicious line -> hint card + sidebar chip
+   - wrong lines: 2 free, then 5s lock on that message
+   ============================================================ */
+const Hints = (() => {
+  const found = new Set();
+  const wrongCount = {};   // key: "src:id" -> count
+  const lockedUntil = {};  // key -> timestamp
+  const LOCK_MS = 5000;
+  const FREE_TRIES = 2;
+  let onFoundCb = null;
+
+  function key(src, id) { return src + ":" + id; }
+
+  function register(src, id, container) {
+    const k = key(src, id);
+    const lines = container.querySelectorAll(".cl");
+    lines.forEach((line) => {
+      line.addEventListener("click", (e) => {
+        e.stopPropagation();
+        handle(src, id, line, k);
+      }, true);
+    });
+    applyLock(k, container);
+    return lines.length;
+  }
+
+  function handle(src, id, line, k) {
+    if (line.classList.contains("found")) return;
+
+    if (lockedUntil[k] && Date.now() < lockedUntil[k]) {
+      UI.toast("Still scanning this message… wait a moment.", "info", 1600);
+      return;
+    }
+
+    if (line.dataset.trap === "1") {
+      const hint = line.dataset.hint;
+      line.classList.add("found");
+      line.dataset.hintShown = hint;
+      found.add(hint);
+      showCard(hint, src, id);
+      addChip(hint, src, line.dataset.srcLabel || "");
+      updatePips();
+      onFoundCb && onFoundCb(hint, found.size);
+      return;
+    }
+
+    /* wrong line */
+    wrongCount[k] = (wrongCount[k] || 0) + 1;
+    if (wrongCount[k] <= FREE_TRIES) {
+      UI.toast("Nothing wrong here.", "", 1700);
+    } else {
+      lockedUntil[k] = Date.now() + LOCK_MS;
+      UI.toast("Too many guesses — rescanning this message (5s).", "bad", 2400);
+      applyLock(k, line.closest("[data-msgbody]") || document);
+      setTimeout(() => unapplyLock(k), LOCK_MS);
+    }
+  }
+
+  function applyLock(k, scope) {
+    if (!lockedUntil[k] || Date.now() >= lockedUntil[k]) return;
+    scope.querySelectorAll(".cl").forEach((l) => {
+      if (!l.classList.contains("found")) l.classList.add("locked");
+    });
+  }
+
+  function unapplyLock(k) {
+    document.querySelectorAll(".cl.locked").forEach((l) => l.classList.remove("locked"));
+  }
+
+  function showCard(hint, src, id) {
+    const card = document.getElementById("hintcard");
+    card.querySelector(".hc-title").textContent = hint;
+    card.querySelector(".hc-runner b").textContent = `"${hint}"`;
+    card.querySelector(".hc-src").textContent = src === "mail" ? "Found in Mail" : "Found in ChatX";
+    card.classList.add("show");
+    clearTimeout(card._t);
+    card._t = setTimeout(() => card.classList.remove("show"), 5200);
+  }
+
+  function addChip(hint, src, label) {
+    const bar = document.getElementById("hintbar");
+    if ([...bar.children].some((c) => c.dataset.hint === hint)) return;
+    const chip = document.createElement("div");
+    chip.className = "hintchip";
+    chip.dataset.hint = hint;
+    chip.innerHTML = `
+      <div class="hc-lbl">Hint found</div>
+      <div class="hc-val">${hint}</div>
+      <div class="hc-src">${src === "mail" ? "Mail" : "ChatX"}${label ? " · " + label : ""}</div>
+    `;
+    bar.appendChild(chip);
+  }
+
+  function updatePips() {
+    const pips = document.querySelectorAll("#hintpips .pip");
+    pips.forEach((p, i) => p.classList.toggle("on", i < found.size));
+    const lbl = document.getElementById("hintcount");
+    if (lbl) lbl.textContent = `${found.size}/3`;
+  }
+
+  function hideCard() {
+    document.getElementById("hintcard").classList.remove("show");
+  }
+
+  function markAll(container, src, id) {
+    container.querySelectorAll('.cl[data-trap="1"]').forEach((l) => {
+      l.classList.add("found");
+      l.dataset.hintShown = l.dataset.hint;
+    });
+  }
+
+  return {
+    register, found, hideCard, markAll,
+    onFound: (cb) => { onFoundCb = cb; },
+    count: () => found.size,
+    reset: () => { found.clear(); Object.keys(wrongCount).forEach(k => delete wrongCount[k]); Object.keys(lockedUntil).forEach(k => delete lockedUntil[k]); }
+  };
+})();
+
+/* ============================================================
+   Timer bridge - reads master clock written by GM console
+   ============================================================ */
+const TimerBridge = (() => {
+  const KEY = "fb_gm_timer";
+  let tick = null;
+
+  function read() {
+    try {
+      const raw = localStorage.getItem(KEY);
+      if (!raw) return null;
+      return JSON.parse(raw);
+    } catch { return null; }
+  }
+
+  function fmt(ms) {
+    if (ms < 0) ms = 0;
+    const s = Math.floor(ms / 1000);
+    return String(Math.floor(s / 60)).padStart(2, "0") + ":" + String(s % 60).padStart(2, "0");
+  }
+
+  function start() {
+    const clock = document.getElementById("clock");
+    tick = setInterval(() => {
+      const now = new Date();
+      const t = now.getHours().toString().padStart(2, "0") + ":" + now.getMinutes().toString().padStart(2, "0");
+      const st = read();
+      if (st && st.running && st.endsAt) {
+        const left = st.endsAt - Date.now();
+        clock.textContent = fmt(left);
+        clock.style.color = left < 120000 ? "var(--red)" : left < 300000 ? "var(--amber)" : "var(--txt)";
+        if (left <= 0 && !window.__timeupShown) {
+          window.__timeupShown = true;
+          showTimeUp();
+        }
+      } else {
+        clock.textContent = t;
+        clock.style.color = "var(--txt)";
+      }
+    }, 500);
+
+    window.addEventListener("storage", (e) => {
+      if (e.key === KEY) checkState();
+    });
+  }
+
+  let lastFreezeSeen = 0;
+
+  function checkState() {
+    const st = read();
+    if (!st) return;
+    if (st.freezeUntil && st.freezeUntil > lastFreezeSeen && Date.now() < st.freezeUntil) {
+      lastFreezeSeen = st.freezeUntil;
+      showFreeze(st.freezeUntil, st.freezeRunner || "Runner");
+    }
+    if (st.forceSecure && st.forceSecure > (window.__forceSecureSeen || 0)) {
+      window.__forceSecureSeen = st.forceSecure;
+      if (!document.getElementById("secured").classList.contains("hidden")) return;
+      document.getElementById("secured").classList.remove("hidden");
+      document.body.classList.remove("infected");
+      document.body.classList.add("secured");
+      const t = document.getElementById("sb-threat");
+      if (t) t.textContent = "SYSTEM SECURED";
+    }
+  }
+
+  let freezeTimer = null;
+  function showFreeze(until, runner) {
+    const f = document.getElementById("freeze");
+    f.querySelector(".fz-sub").textContent = `${runner} opened a decoy box — −2 points`;
+    f.classList.remove("hidden");
+    clearInterval(freezeTimer);
+    const upd = () => {
+      const left = Math.ceil((until - Date.now()) / 1000);
+      f.querySelector(".fz-count").textContent = Math.max(0, left);
+      if (left <= 0) {
+        clearInterval(freezeTimer);
+        f.classList.add("hidden");
+      }
+    };
+    upd();
+    freezeTimer = setInterval(upd, 200);
+  }
+
+  function showTimeUp() {
+    if (document.getElementById("secured").classList.contains("hidden") === false) return;
+    document.getElementById("timeup").classList.remove("hidden");
+  }
+
+  function stop() { clearInterval(tick); }
+
+  return { start, read, checkState, showFreeze, stop };
+})();
+
+
+/* ============================================================
+   FIREWALL BREACH OPS - Mail app
+   ============================================================ */
+
+const MailApp = (() => {
+  let current = null;
+  const read = new Set();
+
+  function open() {
+    const body = WM.create({
+      id: "mail",
+      title: "Mail — Danial's Inbox",
+      icon: Icons.mail,
+      width: 940,
+      height: 610
+    });
+    Taskbar.register("mail", "Mail", Icons.mail);
+    render(body);
+  }
+
+  function render(root) {
+    root.innerHTML = `
+      <div class="mail-app">
+        <div class="mail-side">
+          <div class="mail-side-head">
+            <h3>Inbox</h3>
+            <div class="mail-count">${GameData.mails.length} messages · 1 unread</div>
+          </div>
+          <div class="mail-list scroll" id="mailList"></div>
+        </div>
+        <div class="mail-read" id="mailRead">
+          <div class="mail-read-head">
+            <h1 style="color:var(--txt-mute);font-weight:500;font-size:14px">Select a message</h1>
+          </div>
+          <div class="mail-body" style="display:grid;place-items:center;color:var(--txt-mute);font-size:13px">
+            Choose an email on the left to read it.
+          </div>
+        </div>
+      </div>
+    `;
+
+    const list = root.querySelector("#mailList");
+    GameData.mails.forEach((m) => {
+      const item = document.createElement("div");
+      item.className = "mail-item" + (read.has(m.id) ? " done" : "");
+      item.dataset.id = m.id;
+      item.innerHTML = `
+        <div class="mi-from">${m.fromName}</div>
+        <div class="mi-subj">${m.subject}</div>
+        <div class="mi-time">${m.time}</div>
+      `;
+      item.addEventListener("click", () => select(root, m, item));
+      list.appendChild(item);
+    });
+  }
+
+  function select(root, m, item) {
+    root.querySelectorAll(".mail-item").forEach((i) => i.classList.remove("active"));
+    item.classList.add("active");
+    item.classList.add("done");
+    read.add(m.id);
+    current = m;
+
+    const pane = root.querySelector("#mailRead");
+
+    let bodyHtml = "";
+    m.body.forEach((line) => {
+      if (typeof line === "string") {
+        bodyHtml += `<p><span class="cl" data-trap="0">${line}</span></p>`;
+      } else {
+        bodyHtml += `<p><span class="cl" data-trap="${line.cls === "trap" ? 1 : 0}" data-hint="${line.hint || ""}" data-src-label="${m.subject}">${line.text}</span></p>`;
+      }
+    });
+
+    pane.innerHTML = `
+      <div class="mail-read-head">
+        <h1>${m.subject}</h1>
+        <div class="mail-meta">
+          <div><b>From</b> <span class="${m.flagged ? "from-bad" : ""}">${m.fromName} &lt;${m.from}&gt;</span>${m.flagged ? `<span class="flag" style="background:rgba(244,63,94,.16);color:#fda4af;border:1px solid rgba(244,63,94,.4)">${m.flagText}</span>` : ""}</div>
+          <div><b>To</b> danial.hakim@company.com</div>
+          <div><b>Date</b> Today, ${m.time}</div>
+        </div>
+      </div>
+      <div class="mail-body scroll" data-msgbody>
+        ${bodyHtml}
+        ${m.sig ? `<div class="sig">${m.sig.replace(/\n/g, "<br>")}</div>` : ""}
+      </div>
+    `;
+
+    const bodyEl = pane.querySelector(".mail-body");
+    Hints.register("mail", m.id, bodyEl);
+  }
+
+  return { open };
+})();
+
+
+/* ============================================================
+   FIREWALL BREACH OPS - ChatX app (static threads)
+   ============================================================ */
+
+const ChatApp = (() => {
+  const readSet = new Set();
+  let currentId = null;
+
+  function open() {
+    const body = WM.create({
+      id: "chatx",
+      title: "ChatX",
+      icon: Icons.chat,
+      width: 900,
+      height: 600
+    });
+    Taskbar.register("chatx", "ChatX", Icons.chat);
+    render(body);
+  }
+
+  function render(root) {
+    root.innerHTML = `
+      <div class="chat-app">
+        <div class="chat-side">
+          <div class="chat-side-head">
+            <div class="dot"></div>
+            <h3>Chats</h3>
+          </div>
+          <div class="chat-list scroll" id="chatList"></div>
+        </div>
+        <div class="chat-main" id="chatMain">
+          <div style="flex:1;display:grid;place-items:center;color:var(--txt-mute);font-size:13px">
+            Select a conversation
+          </div>
+        </div>
+      </div>
+    `;
+
+    const list = root.querySelector("#chatList");
+    GameData.chats.forEach((c) => {
+      const item = document.createElement("div");
+      item.className = "chat-item" + (readSet.has(c.id) ? " done" : "");
+      item.dataset.id = c.id;
+      const initials = c.name.replace(/[^A-Za-z ]/g, "").trim().slice(0, 2).toUpperCase() || "??";
+      item.innerHTML = `
+        <div class="avatar ${c.warn ? "warn" : ""}">${initials}</div>
+        <div class="ci-meta">
+          <div class="ci-name">${c.name}${c.tag ? `<span class="tag">${c.tag}</span>` : ""}</div>
+          <div class="ci-prev">${c.preview}</div>
+        </div>
+      `;
+      item.addEventListener("click", () => select(root, c, item));
+      list.appendChild(item);
+    });
+  }
+
+  function select(root, c, item) {
+    root.querySelectorAll(".chat-item").forEach((i) => i.classList.remove("active"));
+    item.classList.add("active");
+    item.classList.add("done");
+    readSet.add(c.id);
+    currentId = c.id;
+
+    const main = root.querySelector("#chatMain");
+    const initials = c.name.replace(/[^A-Za-z ]/g, "").trim().slice(0, 2).toUpperCase() || "??";
+
+    main.innerHTML = `
+      <div class="chat-head">
+        <div class="avatar ${c.warn ? "warn" : ""}">${initials}</div>
+        <div>
+          <div class="ch-name">${c.name}${c.tag ? `<span class="tag" style="margin-left:7px">${c.tag}</span>` : ""}</div>
+          <div class="ch-sub">${c.sub}</div>
+        </div>
+      </div>
+      <div class="chat-body scroll" data-msgbody id="chatBody"></div>
+      <div class="chat-foot">Read-only conversation history — ChatX desktop archive</div>
+    `;
+
+    const bodyEl = main.querySelector("#chatBody");
+
+    c.messages.forEach((msg) => {
+      const b = document.createElement("div");
+
+      if (msg.who === "sys") {
+        b.className = "bubble sys";
+        b.textContent = msg.text;
+        bodyEl.appendChild(b);
+        return;
+      }
+
+      b.className = "bubble" + (msg.who === "me" ? " me" : "");
+
+      let inner = msg.sender ? `<div style="font-size:10px;color:#7dd3fc;font-weight:700;margin-bottom:3px">${msg.sender}</div>` : "";
+
+      if (msg.trap) {
+        inner += `<span class="cl" data-trap="1" data-hint="${msg.hint}" data-src-label="${c.name}">${msg.text}</span>`;
+      } else {
+        inner += `<span class="cl" data-trap="0">${msg.text.replace(/\n/g, "<br>")}</span>`;
+      }
+
+      inner += `<span class="btime">${msg.t}</span>`;
+      b.innerHTML = inner;
+      bodyEl.appendChild(b);
+    });
+
+    if (c.warn) {
+      const warn = document.createElement("div");
+      warn.className = "bubble sys";
+      warn.style.background = "rgba(244,63,94,.1)";
+      warn.style.borderColor = "rgba(244,63,94,.35)";
+      warn.style.color = "#fda4af";
+      warn.textContent = "⚠ This account is not verified";
+      bodyEl.prepend(warn);
+    }
+
+    Hints.register("chat", c.id, bodyEl);
+    bodyEl.scrollTop = 0;
+  }
+
+  return { open };
+})();
+
+
+/* ============================================================
+   FIREWALL BREACH OPS - System Override app
+   [FRM][26][XP] -> FRM-26-XP -> OVERRIDE -> KILL THE VIRUS
+   ============================================================ */
+
+const OverrideApp = (() => {
+  let state = {
+    f1: false, f2: false, f3: false,
+    codeOk: false,
+    killed: false
+  };
+
+  function open() {
+    const body = WM.create({
+      id: "override",
+      title: "System Override",
+      icon: Icons.override,
+      width: 760,
+      height: 640,
+      resizable: false
+    });
+    Taskbar.register("override", "System Override", Icons.override);
+    render(body);
+  }
+
+  function render(root) {
+    root.innerHTML = `
+      <div class="ovr scroll" data-ovr>
+        <div class="ovr-head">
+          <div class="kick">Nexus Defence Console</div>
+          <h1>System Override</h1>
+          <p>Enter the three fragments recovered from the field, then authorise the override code to regain control of this machine.</p>
+        </div>
+
+        <div class="frag-row" data-fragrow>
+          <div class="frag" data-slot="1"><div class="flabel">Fragment 1</div><div class="fval">···</div></div>
+          <div class="frag" data-slot="2"><div class="flabel">Fragment 2</div><div class="fval">···</div></div>
+          <div class="frag" data-slot="3"><div class="flabel">Fragment 3</div><div class="fval">···</div></div>
+        </div>
+
+        <div style="text-align:center;font-size:11px;color:var(--txt-mute);margin-top:2px">
+          Type each fragment card into the box below, one at a time
+        </div>
+
+        <div class="code-row" data-fragcode>
+          <input type="text" maxlength="6" placeholder="TYPE A FRAGMENT" data-input="frag" autocomplete="off" spellcheck="false">
+          <button class="btn" data-act="frag">Submit</button>
+        </div>
+
+        <div class="code-row" style="margin-top:20px">
+          <input type="text" maxlength="12" placeholder="OVERRIDE CODE" data-input="code" autocomplete="off" spellcheck="false" disabled>
+          <button class="btn primary" data-act="ovr" disabled>Override</button>
+        </div>
+
+        <div class="kill-row">
+          <button class="btn danger" data-act="kill" disabled>Kill the Virus</button>
+        </div>
+
+        <div class="progress"><div data-progress></div></div>
+
+        <div class="ovr-log scroll" data-log>
+<span class="l-dim">NEXUS DEFENCE CONSOLE v4.2.1 — ready</span>
+<span class="l-dim">Awaiting fragment input: ${GameData.fragments.length} cards required</span>
+        </div>
+
+        <div class="ovr-note">
+          <b>Field agents:</b> bring one card from each matched box. Fragments may be entered in any order.
+        </div>
+      </div>
+    `;
+
+    wire(root);
+    logAdd(root, 'l-cy', 'Operator session opened');
+  }
+
+  function logAdd(root, cls, text) {
+    const log = root.querySelector("[data-log]");
+    const line = document.createElement("div");
+    line.className = cls;
+    line.textContent = text;
+    log.appendChild(line);
+    log.scrollTop = log.scrollHeight;
+  }
+
+  function logRaw(root, html) {
+    const log = root.querySelector("[data-log]");
+    log.insertAdjacentHTML("beforeend", html);
+    log.scrollTop = log.scrollHeight;
+  }
+
+  function setProgress(root, pct) {
+    root.querySelector("[data-progress]").style.width = pct + "%";
+  }
+
+  function wire(root) {
+    const fragInput = root.querySelector('[data-input="frag"]');
+    const fragBtn = root.querySelector('[data-act="frag"]');
+    const codeInput = root.querySelector('[data-input="code"]');
+    const ovrBtn = root.querySelector('[data-act="ovr"]');
+    const killBtn = root.querySelector('[data-act="kill"]');
+
+    fragBtn.addEventListener("click", submitFrag);
+    fragInput.addEventListener("keydown", (e) => { if (e.key === "Enter") submitFrag(); });
+
+    function submitFrag() {
+      const val = fragInput.value.trim().toUpperCase();
+      if (!val) return;
+
+      const idx = GameData.fragments.indexOf(val);
+      const slotKey = "f" + (idx + 1);
+
+      if (idx === -1) {
+        fragInput.classList.add("bad");
+        setTimeout(() => fragInput.classList.remove("bad"), 400);
+        UI.toast("That fragment is not valid.", "bad", 2000);
+        logAdd(root, "l-err", `REJECTED  "${val}" — no matching fragment`);
+        return;
+      }
+
+      if (state[slotKey]) {
+        UI.toast("That fragment is already loaded.", "info", 2000);
+        fragInput.value = "";
+        return;
+      }
+
+      state[slotKey] = true;
+      const slot = root.querySelector(`[data-slot="${idx + 1}"]`);
+      slot.classList.add("done");
+      slot.querySelector(".fval").textContent = val;
+      fragInput.value = "";
+      fragInput.focus();
+
+      UI.toast(`Fragment accepted: ${val}`, "good", 1800);
+      logAdd(root, "l-ok", `ACCEPTED  ${val} → slot ${idx + 1} [OK]`);
+
+      const allDone = state.f1 && state.f2 && state.f3;
+      if (allDone) {
+        codeInput.disabled = false;
+        ovrBtn.disabled = false;
+        codeInput.focus();
+        logAdd(root, "l-cy", "All fragments loaded — enter override code");
+        UI.toast("All three fragments loaded. Enter the override code.", "good", 3200);
+        setProgress(root, 33);
+      }
+    }
+
+    codeInput.addEventListener("keydown", (e) => { if (e.key === "Enter" && !ovrBtn.disabled) doOverride(); });
+    ovrBtn.addEventListener("click", doOverride);
+
+    function doOverride() {
+      const val = codeInput.value.trim().toUpperCase();
+      if (val !== GameData.overrideCode) {
+        codeInput.classList.add("bad");
+        setTimeout(() => { codeInput.classList.remove("bad"); codeInput.value = ""; codeInput.focus(); }, 420);
+        UI.toast("Override code rejected. Check your fragments.", "bad", 2600);
+        logAdd(root, "l-err", `OVERRIDE REJECTED — code "${val}" invalid`);
+        return;
+      }
+
+      state.codeOk = true;
+      codeInput.disabled = true;
+      ovrBtn.disabled = true;
+      killBtn.disabled = false;
+      setProgress(root, 66);
+
+      logAdd(root, "l-ok", "OVERRIDE ACCEPTED — authentication granted");
+      logAdd(root, "l-cy", "Kill-switch armed. Awaiting operator confirmation.");
+      UI.toast("Override accepted. Kill-switch armed.", "good", 3000);
+
+      const note = root.querySelector(".ovr-note");
+      note.innerHTML = `<b style="color:var(--green)">Kill-switch armed.</b> Press <b style="color:#fb7185">KILL THE VIRUS</b> to purge the infection.`;
+
+      killBtn.focus();
+    }
+
+    killBtn.addEventListener("click", () => {
+      if (!state.codeOk || state.killed) return;
+      state.killed = true;
+      killBtn.disabled = true;
+      purge(root);
+    });
+  }
+
+  function purge(root) {
+    const overlay = document.getElementById("purge");
+    overlay.classList.remove("hidden");
+    overlay.innerHTML = "";
+
+    const lines = [
+      { t: "AUTH     ", c: "p-cy", m: "Operator override FRM-26-XP accepted" },
+      { t: "SCAN     ", c: "", m: "Locating malicious process…" },
+      { t: "FOUND    ", c: "p-rd", m: "PID 1337  NOTMALWARE.exe  (666,666 K)" },
+      { t: "FOUND    ", c: "p-rd", m: "PID 1777  locker.sys      (kernel driver)" },
+      { t: "LOCK     ", c: "p-am", m: "Halting threads…" },
+      { t: "KILL     ", c: "", m: "Terminating NOTMALWARE.exe [1/2]" },
+      { t: "KILL     ", c: "", m: "Terminating NOTMALWARE.exe [2/2]" },
+      { t: "DRIVER   ", c: "", m: "Unloading locker.sys from kernel…" },
+      { t: "KEYS     ", c: "", m: "Recovering encryption keys from memory…" },
+      { t: "DECRYPT  ", c: "", m: "Restoring 1,284 files…" },
+      { t: "DECRYPT  ", c: "", m: "Restoring 3,911 files…" },
+      { t: "DECRYPT  ", c: "", m: "Restoring 6,402 files…" },
+      { t: "CLEAN    ", c: "", m: "Removing persistence: Run\\NOTMALWARE" },
+      { t: "CLEAN    ", c: "", m: "Removing persistence: Task Scheduler\\Updater" },
+      { t: "VERIFY   ", c: "", m: "Integrity check 100% — no residual payload" },
+      { t: "", c: "p-big", m: "FIREWALL RESTORED" }
+    ];
+
+    let i = 0;
+    const timer = setInterval(() => {
+      if (i >= lines.length) {
+        clearInterval(timer);
+        setTimeout(finish, 700);
+        return;
+      }
+      const l = lines[i++];
+      const div = document.createElement("div");
+      div.className = l.c;
+      div.textContent = l.t ? `[${l.t.trim().padEnd(8)}] ${l.m}` : l.m;
+      overlay.appendChild(div);
+      if (i % 3 === 0) setProgress(root, 66 + Math.min(33, i * 2));
+      i++;
+    }, 620);
+  }
+
+  function finish() {
+    document.getElementById("purge").classList.add("hidden");
+    const flash = document.getElementById("secureflash");
+    flash.classList.remove("hidden");
+    setTimeout(() => flash.classList.add("hidden"), 900);
+
+    document.getElementById("secured").classList.remove("hidden");
+    document.body.classList.remove("infected");
+    document.body.classList.add("secured");
+
+    const st = document.getElementById("sb-threat");
+    st.textContent = "SYSTEM SECURED";
+    const sb = document.getElementById("sb-brand");
+    if (sb) sb.style.color = "var(--green)";
+  }
+
+  return { open };
+})();
+
+
+/* ============================================================
+   FIREWALL BREACH OPS - Atmosphere apps
+   Files / Notepad / Task Manager / Ransom note
+   ============================================================ */
+
+const FilesApp = (() => {
+  let curFolder = "Desktop";
+  let rootEl = null;
+
+  function open(folder) {
+    const body = WM.create({
+      id: "files",
+      title: "File Explorer",
+      icon: Icons.files,
+      width: 820,
+      height: 520
+    });
+    Taskbar.register("files", "Files", Icons.files);
+    rootEl = body;
+    curFolder = folder || "Desktop";
+    render();
+  }
+
+  function render() {
+    const root = rootEl;
+    const folders = ["Desktop", "Documents", "Downloads", "Inbox"];
+
+    root.innerHTML = `
+      <div class="files">
+        <div class="files-side">
+          <h3>Quick access</h3>
+          <div class="fs-tree">
+            ${folders.map(f => `<div class="fs-node ${f === curFolder ? "active" : ""}" data-folder="${f}">${Icons.folder}${f}</div>`).join("")}
+          </div>
+        </div>
+        <div class="files-main">
+          <div class="files-bar">C:\\Users\\danial\\${curFolder}</div>
+          <div class="files-grid" id="filesGrid"></div>
+        </div>
+      </div>
+    `;
+
+    root.querySelectorAll(".fs-node").forEach((n) => {
+      n.addEventListener("click", () => { curFolder = n.dataset.folder; render(); });
+    });
+
+    const grid = root.querySelector("#filesGrid");
+    const items = GameData.files[curFolder] || [];
+
+    items.forEach((f) => {
+      const d = document.createElement("div");
+      d.className = "file-item" + (f.icon === "exe" ? " exec" : "");
+      d.innerHTML = `${f.icon === "folder" ? Icons.folder : f.icon === "exe" ? Icons.exe : Icons.file}<span>${f.name}</span>`;
+      d.addEventListener("click", () => {
+        if (f.open === "ransom") { Ransom.open(); return; }
+        if (f.open === "todo") { NotepadApp.open("todo"); return; }
+        if (f.open && GameData.files[f.open]) { curFolder = f.open; render(); return; }
+        if (f.sus) {
+          UI.toast("Cannot open — file has been flagged by system policy.", "bad", 2600);
+        } else if (f.icon === "exe") {
+          UI.toast("Windows cannot open this file on a game machine.", "info", 2200);
+        } else {
+          UI.toast(`Preview unavailable: ${f.name}`, "info", 2000);
+        }
+      });
+      grid.appendChild(d);
+    });
+
+    if (!items.length) {
+      grid.innerHTML = `<div style="color:var(--txt-mute);font-size:12.5px;padding:20px">This folder is empty.</div>`;
+    }
+  }
+
+  return { open };
+})();
+
+
+const NotepadApp = (() => {
+  function open(which) {
+    const id = "np-" + which;
+    const body = WM.create({
+      id,
+      title: which === "todo" ? "TO-DO.txt — Notepad" : "Note",
+      icon: Icons.notepad,
+      width: 560,
+      height: 440
+    });
+    Taskbar.register(id, which === "todo" ? "TO-DO.txt" : "Note", Icons.notepad);
+
+    body.innerHTML = `
+      <div class="notepad">
+        <div class="np-bar"><span>File</span><span>Edit</span><span>Format</span><span>View</span><span>Help</span></div>
+        <textarea class="np-text" readonly spellcheck="false">${GameData.notes[which] || ""}</textarea>
+      </div>
+    `;
+  }
+  return { open };
+})();
+
+
+const TaskMgrApp = (() => {
+  function open() {
+    const body = WM.create({
+      id: "taskmgr",
+      title: "Task Manager",
+      icon: Icons.taskmgr,
+      width: 700,
+      height: 500
+    });
+    Taskbar.register("taskmgr", "Task Manager", Icons.taskmgr);
+
+    body.innerHTML = `
+      <div class="tm">
+        <div class="tm-bar"><span>CPU: <b>68%</b></span><span>Memory: <b>87%</b></span><span>Disk: <b>100%</b></span><span>Network: <b>0.2 Mbps</b></span></div>
+        <div class="tm-table scroll">
+          <div class="tm-row head"><div>Name</div><div>CPU</div><div>Memory</div><div>PID</div></div>
+          ${GameData.processes.map(p => `
+            <div class="tm-row ${p.sus ? "sus" : ""}">
+              <div>${p.name}</div><div>${p.cpu}</div><div>${p.mem}</div><div>${p.pid}</div>
+            </div>`).join("")}
+        </div>
+      </div>
+    `;
+  }
+  return { open };
+})();
+
+
+const Ransom = (() => {
+  let shown = false;
+
+  function open() {
+    if (WM.exists("ransom")) { WM.focus(WM.node("ransom")); return; }
+    const body = WM.create({
+      id: "ransom",
+      title: "RANSOM_NOTE.txt — Notepad",
+      icon: Icons.lock,
+      width: 660,
+      height: 540
+    });
+    Taskbar.register("ransom", "RANSOM_NOTE.txt", Icons.lock);
+    shown = true;
+
+    body.innerHTML = `
+      <div class="ransom scroll">
+        <h1>YOUR FILES ARE ENCRYPTED</h1>
+        <div class="r-rule"></div>
+        <p>All documents, photos and databases on this machine have been locked with military-grade encryption.</p>
+        <p class="dim">You have ONE chance to get them back.</p>
+        <div class="r-box">
+          <b>Total files locked:</b> 11,597<br>
+          <b>Files recovered:</b> 0<br>
+          <b>Encryption:</b> RSA-4096 + AES-256<br>
+          <b>Backup status:</b> destroyed
+        </div>
+        <p>Do not attempt to shut down this computer. Do not rename any files. Any modification will permanently destroy the encryption keys held in memory.</p>
+        <p>Somewhere on this machine is the way back in. Your team will have to find it.</p>
+        <div class="r-timer">DATA ENCRYPTION 47%</div>
+        <p class="dim" style="text-align:center">This percentage is increasing.</p>
+        <div class="r-foot">
+          — NOTMALWARE —<br>
+          stay calm. stay quiet. watch your messages.
+        </div>
+      </div>
+    `;
+  }
+
+  return { open };
+})();
+
+
+/* ============================================================
+   FIREWALL BREACH OPS - Boot sequence, breach takeover, desktop
+   ============================================================ */
+
+const Boot = (() => {
+  const LINES = [
+    { t: "NexusBIOS v9.14.2210 — CyberOps-01", c: "b-brand" },
+    { t: "" },
+    { t: "CPU         : NexCore i7 @ 3.40GHz  (8 cores)", c: "" },
+    { t: "Memory      : 16384 MB  [OK]", c: "" },
+    { t: "Storage     : NVMe 512GB  [OK]", c: "" },
+    { t: "" },
+    { t: "Initialising device tree ................ [ OK ]", c: "b-ok" },
+    { t: "Mounting encrypted volume C: ............ [ OK ]", c: "b-ok" },
+    { t: "Starting network stack (eth0) ........... [ OK ]", c: "b-ok" },
+    { t: "Loading security agent nexus-defence.sys  [ WARN ]", c: "b-warn" },
+    { t: "  -> signature mismatch: expected 0x4F2A, got 0x0000", c: "b-warn" },
+    { t: "" },
+    { t: "Scanning for anomalies .................. ", c: "" },
+    { t: "  !! 3 unauthorised persistence entries detected", c: "b-err" },
+    { t: "  !! kernel driver 'locker.sys' loaded at boot", c: "b-err" },
+    { t: "  !! encryption thread active on PID 1337", c: "b-err" },
+    { t: "" },
+    { t: "CRITICAL: system integrity compromised.", c: "b-err" },
+    { t: "" }
+  ];
+
+  function run(onDone) {
+    const el = document.getElementById("boot");
+    el.classList.remove("hidden");
+    el.innerHTML = `<span class="b-brand">NEXUS DEFENCE BIOS</span>`;
+
+    let i = 0;
+    const step = () => {
+      if (i >= LINES.length) {
+        const cur = document.createElement("span");
+        cur.className = "b-cursor";
+        el.appendChild(cur);
+        setTimeout(() => {
+          el.classList.add("fade");
+          setTimeout(() => { el.classList.add("hidden"); onDone(); }, 620);
+        }, 700);
+        return;
+      }
+      const l = LINES[i++];
+      const div = document.createElement("div");
+      if (l.c === "b-brand") { el.appendChild(div); step(); return; }
+      div.className = l.c;
+      div.textContent = l.t;
+      el.appendChild(div);
+      el.scrollTop = el.scrollHeight;
+      setTimeout(step, l.t.startsWith("  !!") ? 240 : 150);
+    };
+    setTimeout(step, 420);
+  }
+
+  return { run };
+})();
+
+
+const Breach = (() => {
+  function show(onDone) {
+    const el = document.getElementById("breach");
+    el.classList.remove("hidden");
+    el.innerHTML = `
+      <div class="scanlines"></div>
+      <div class="breach-inner">
+        <div class="skull">☠</div>
+        <h1>YOU'VE BEEN HACKED</h1>
+        <div class="br-sub">
+          Every file on this laptop is being encrypted right now.<br>
+          <b>Find what went wrong. Save your machine.</b>
+        </div>
+        <div class="br-bar"><div data-brbar></div></div>
+        <div class="br-pct" data-brpct>DATA ENCRYPTION — 0%</div>
+        <button class="br-btn" data-brbtn>Enter the machine</button>
+        <div class="br-hint">read your messages · trust nothing · report to your runners</div>
+      </div>
+    `;
+
+    const bar = el.querySelector("[data-brbar]");
+    const pct = el.querySelector("[data-brpct]");
+    const btn = el.querySelector("[data-brbtn]");
+
+    let p = 0;
+    const t = setInterval(() => {
+      p = Math.min(47, p + Math.random() * 3.2);
+      bar.style.width = p + "%";
+      pct.textContent = `DATA ENCRYPTION — ${Math.floor(p)}%`;
+      if (p >= 47) {
+        clearInterval(t);
+        btn.classList.add("ready");
+      }
+    }, 90);
+
+    setTimeout(() => btn.classList.add("ready"), 4200);
+
+    btn.addEventListener("click", () => {
+      clearInterval(t);
+      el.classList.add("hidden");
+      onDone && onDone();
+    });
+  }
+  return { show };
+})();
+
+
+const Desktop = (() => {
+  const APPS = [
+    { id: "mail",     label: "Mail",            icon: Icons.mail,     open: () => MailApp.open(),     badge: "1" },
+    { id: "chatx",    label: "ChatX",           icon: Icons.chat,     open: () => ChatApp.open(),     badge: "2" },
+    { id: "override", label: "System Override", icon: Icons.override, open: () => OverrideApp.open() },
+    { id: "files",    label: "File Explorer",   icon: Icons.files,    open: () => FilesApp.open() },
+    { id: "notepad",  label: "TO-DO.txt",       icon: Icons.notepad,  open: () => NotepadApp.open("todo") },
+    { id: "taskmgr",  label: "Task Manager",    icon: Icons.taskmgr,  open: () => TaskMgrApp.open() },
+    { id: "settings", label: "Settings",        icon: Icons.settings, open: null, dead: true }
+  ];
+
+  function render() {
+    const box = document.getElementById("icons");
+    box.innerHTML = "";
+
+    APPS.forEach((a) => {
+      const d = document.createElement("button");
+      d.className = "icon" + (a.dead ? " dead" : "");
+      d.innerHTML = `${a.icon}<span>${a.label}</span>${a.badge ? `<span class="badge">${a.badge}</span>` : ""}`;
+      d.addEventListener("click", () => {
+        if (a.dead) { UI.toast("Settings is locked by system policy.", "info", 2000); return; }
+        a.open();
+      });
+      box.appendChild(d);
+    });
+  }
+
+  function init() {
+    render();
+    document.getElementById("hintpips").innerHTML = `
+      <span id="hintcount">0/3</span>
+      <span class="pip"></span><span class="pip"></span><span class="pip"></span>
+    `;
+  }
+
+  return { init, render };
+})();
+
+
+const Game = (() => {
+  function start() {
+    Desktop.init();
+    TimerBridge.start();
+
+    Boot.run(() => {
+      document.body.classList.add("infected");
+      Breach.show(() => {
+        MailApp.open();
+        Ransom.open();
+        setTimeout(() => {
+          ChatApp.open();
+          setTimeout(() => {
+            UI.toast("Tip: click the sentence that seems wrong.", "info", 5000);
+          }, 1400);
+        }, 900);
+      });
+    });
+
+    wireGlobal();
+  }
+
+  function wireGlobal() {
+    document.getElementById("hintcard").addEventListener("click", () => Hints.hideCard());
+
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") Hints.hideCard();
+    });
+
+    /* GM freeze bridge polls */
+    setInterval(() => TimerBridge.checkState(), 1200);
+  }
+
+  return { start };
+})();
+
+window.addEventListener("DOMContentLoaded", () => Game.start());
+
+
+/* ---- gm console ---- */
+window.__GM_INIT = function(){
+
+const PASS = "gm2026";
+const KEY = "fb_gm_timer";
+const STATE_KEY = "fb_gm_state";
+
+/* ---------- gate ---------- */
+const gate = document.getElementById("gate");
+const app = document.getElementById("app");
+
+document.getElementById("gateBtn").addEventListener("click", tryUnlock);
+document.getElementById("gatePass").addEventListener("keydown", e => { if (e.key === "Enter") tryUnlock(); });
+
+function tryUnlock() {
+  const v = document.getElementById("gatePass").value;
+  if (v === PASS) { gate.style.display = "none"; app.style.display = "block"; init(); }
+  else { document.getElementById("gatePass").style.borderColor = "var(--red)"; document.getElementById("gatePass").value = ""; }
+}
+
+/* ---------- state ---------- */
+let state = load() || {
+  running: false,
+  endsAt: 0,
+  remaining: 15 * 60 * 1000,
+  base: 100,
+  accuracy: 0,
+  penalties: 0,
+  runners: [
+    { name: "Runner 1", decoys: 0 },
+    { name: "Runner 2", decoys: 0 },
+    { name: "Runner 3", decoys: 0 }
+  ]
+};
+
+function load() {
+  try { return JSON.parse(localStorage.getItem(STATE_KEY)); } catch { return null; }
+}
+function save() {
+  localStorage.setItem(STATE_KEY, JSON.stringify(state));
+  push();
+}
+function push() {
+  const payload = {
+    running: state.running,
+    endsAt: state.endsAt,
+    remaining: state.remaining,
+    freezeUntil: state.freezeUntil || 0,
+    freezeRunner: state.freezeRunner || "",
+    forceSecure: Number(localStorage.getItem("fb_force_secure") || 0)
+  };
+  localStorage.setItem(KEY, JSON.stringify(payload));
+}
+
+/* ---------- timer ---------- */
+let ticker = null;
+
+function left() {
+  if (state.running) return Math.max(0, state.endsAt - Date.now());
+  return state.remaining;
+}
+function fmt(ms) {
+  const s = Math.floor(ms / 1000);
+  return String(Math.floor(s / 60)).padStart(2, "0") + ":" + String(s % 60).padStart(2, "0");
+}
+function paintClock() {
+  const el = document.getElementById("clock");
+  const ms = left();
+  el.textContent = fmt(ms);
+  el.className = "timer" + (ms < 120000 ? " crit" : ms < 300000 ? " warn" : "");
+  document.getElementById("statePill").className = "pill " + (state.running ? "on" : "off");
+  document.getElementById("statePill").textContent = state.running ? "RUNNING" : (ms === 0 ? "ENDED" : "PAUSED");
+}
+function startTicker() {
+  clearInterval(ticker);
+  ticker = setInterval(() => {
+    paintClock();
+    if (state.running && left() <= 0) {
+      state.running = false;
+      state.remaining = 0;
+      save();
+      log("Timer expired", "bad");
+      paintClock();
+    }
+  }, 250);
+}
+
+/* ---------- buttons ---------- */
+document.getElementById("btnStart").addEventListener("click", () => {
+  if (state.running) return;
+  if (state.remaining <= 0) state.remaining = 15 * 60 * 1000;
+  state.endsAt = Date.now() + state.remaining;
+  state.running = true;
+  save();
+  log("Timer started — 15:00");
+});
+
+document.getElementById("btnPause").addEventListener("click", () => {
+  if (!state.running) return;
+  state.remaining = left();
+  state.running = false;
+  save();
+  log("Timer paused at " + fmt(state.remaining));
+});
+
+document.getElementById("btnEnd").addEventListener("click", () => {
+  state.running = false;
+  state.remaining = 0;
+  state.endsAt = 0;
+  save();
+  log("Round ended by GM", "bad");
+});
+
+document.getElementById("btnReset").addEventListener("click", () => {
+  if (!confirm("Reset the entire game state? Do this between teams.")) return;
+  state = {
+    running: false,
+    endsAt: 0,
+    remaining: 15 * 60 * 1000,
+    base: 100,
+    accuracy: 0,
+    penalties: 0,
+    freezeUntil: 0,
+    freezeRunner: "",
+    runners: [
+      { name: "Runner 1", decoys: 0 },
+      { name: "Runner 2", decoys: 0 },
+      { name: "Runner 3", decoys: 0 }
+    ]
+  };
+  save();
+  document.getElementById("log").innerHTML = "";
+  log("State reset — ready for next team");
+});
+
+document.getElementById("btnForceSecure").addEventListener("click", () => {
+  localStorage.setItem("fb_force_secure", String(Date.now()));
+  log("Force-secure signalled", "hi");
+});
+
+document.getElementById("btnMinus2").addEventListener("click", () => {
+  state.accuracy -= 2; save(); paint();
+  log("Accuracy −2", "bad");
+});
+document.getElementById("btnPlus2").addEventListener("click", () => {
+  state.accuracy += 2; save(); paint();
+  log("Accuracy +2", "hi");
+});
+
+document.getElementById("addRunner").addEventListener("click", () => {
+  const inp = document.getElementById("newRunner");
+  const name = inp.value.trim();
+  if (!name) return;
+  state.runners.push({ name, decoys: 0 });
+  inp.value = "";
+  save();
+  paint();
+  log("Runner added: " + name);
+});
+
+/* ---------- runners ---------- */
+function paint() {
+  const box = document.getElementById("runners");
+  box.innerHTML = state.runners.map((r, i) => `
+    <div class="runner">
+      <div class="rname">${r.name}</div>
+      <div class="rscore">${r.decoys} decoy${r.decoys === 1 ? "" : "s"}</div>
+      <button class="freeze-btn" data-i="${i}">Freeze 15s</button>
+    </div>
+  `).join("");
+
+  box.querySelectorAll(".freeze-btn").forEach((b) => {
+    b.addEventListener("click", () => {
+      const i = +b.dataset.i;
+      const r = state.runners[i];
+      r.decoys++;
+      state.penalties += 2;
+      state.freezeUntil = Date.now() + 15000;
+      state.freezeRunner = r.name;
+      save();
+      paint();
+      log(`${r.name} opened a decoy — −2 pts, 15s freeze`, "bad");
+    });
+  });
+
+  document.getElementById("sBase").textContent = state.base;
+  document.getElementById("sPen").textContent = "-" + state.penalties;
+  document.getElementById("sAcc").textContent = (state.accuracy >= 0 ? "+" : "") + state.accuracy;
+  const fin = state.base - state.penalties + state.accuracy;
+  const fe = document.getElementById("sFinal");
+  fe.textContent = fin;
+  fe.parentElement.className = "score" + (fin < 0 ? " neg" : "");
+}
+
+/* ---------- status ---------- */
+function paintStatus() {
+  const el = document.getElementById("statusLines");
+  el.innerHTML = `
+    <div class="hintline"><span class="k">Time remaining</span><span class="v">${fmt(left())}</span></div>
+    <div class="hintline"><span class="k">Timer</span><span class="v">${state.running ? "RUNNING" : "PAUSED"}</span></div>
+    <div class="hintline"><span class="k">Decoy opens</span><span class="v">${state.runners.reduce((a, r) => a + r.decoys, 0)}</span></div>
+    <div class="hintline"><span class="k">Penalties</span><span class="v">-${state.penalties}</span></div>
+    <div class="hintline"><span class="k">Freeze active</span><span class="v">${state.freezeUntil && Date.now() < state.freezeUntil ? state.freezeRunner : "none"}</span></div>
+  `;
+}
+
+/* ---------- log ---------- */
+function log(msg, cls = "") {
+  const el = document.getElementById("log");
+  const d = document.createElement("div");
+  d.className = cls;
+  const t = new Date().toLocaleTimeString("en-GB", { hour12: false });
+  d.textContent = `[${t}] ${msg}`;
+  el.appendChild(d);
+  el.scrollTop = el.scrollHeight;
+}
+
+/* ---------- init ---------- */
+function init() {
+  paint();
+  paintClock();
+  paintStatus();
+  startTicker();
+  setInterval(paintStatus, 1000);
+  if (state.running) log("Resumed with existing timer");
+  else log("Console ready");
+}
+
+window.addEventListener("storage", (e) => {
+  if (e.key === STATE_KEY && e.newValue) {
+    try { state = JSON.parse(e.newValue); paint(); paintClock(); } catch {}
+  }
+});
+
+};
+
+/* ---- router: #gm shows the console in place of the game ---- */
+function route(){
+  var isGm = location.hash === "#gm";
+  document.getElementById("gm-root").style.display = isGm ? "block" : "none";
+  document.getElementById("gm-mode-styles").disabled = !isGm;
+
+  var shell = ["boot","breach","desktop","hintcard","freeze","purge","secureflash","secured","timeup"];
+  shell.forEach(function(id){
+    var n = document.getElementById(id);
+    if (!n) return;
+    n.style.display = isGm ? "none" : "";
+  });
+
+  if (isGm && !window.__gmBooted) {
+    window.__gmBooted = true;
+    document.getElementById("gate").style.display = "grid";
+    window.__GM_INIT();
+  }
+}
+
+window.addEventListener("hashchange", function(){
+  if (location.hash !== "#gm") { location.reload(); return; }
+  route();
+});
+
+if (location.hash === "#gm") {
+  route();
+}
+
+})();
+</script>
+</body>
+</html>

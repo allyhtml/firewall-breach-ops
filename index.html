@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>CYBEROPS-01</title>
+<link rel="stylesheet" href="css/desktop.css" />
+<link rel="stylesheet" href="css/apps.css" />
+<link rel="stylesheet" href="css/animations.css" />
+</head>
+<body>
+
+<!-- ============ BOOT ============ -->
+<div id="boot"></div>
+
+<!-- ============ BREACH TAKEOVER ============ -->
+<div id="breach" class="hidden"></div>
+
+<!-- ============ DESKTOP ============ -->
+<div id="desktop">
+  <div id="grid"></div>
+
+  <div id="statusbar">
+    <span class="sb-brand" id="sb-brand">CYBEROPS-01</span>
+    <span class="sb-threat" id="sb-threat">THREAT ACTIVE</span>
+    <span id="hintpips"></span>
+    <span class="sb-spacer"></span>
+    <span id="clock">--:--</span>
+  </div>
+
+  <div id="icons"></div>
+
+  <div id="hintbar"></div>
+  <div id="toasts"></div>
+
+  <div id="taskbar">
+    <div id="tasklist"></div>
+  </div>
+</div>
+
+<!-- ============ HINT CARD ============ -->
+<div id="hintcard">
+  <div class="hc-kick">⚠ suspicious line identified</div>
+  <div class="hc-title">FAKE URGENCY</div>
+  <div class="hc-src" style="font-size:11.5px;color:var(--txt-mute);letter-spacing:.08em;text-transform:uppercase"></div>
+  <div class="hc-sub">This is the trick used in this message.</div>
+  <div class="hc-runner">
+    Runner — find the box with this word on the lid:
+    <b>"FAKE URGENCY"</b>
+  </div>
+  <div class="hc-close">click anywhere to close</div>
+</div>
+
+<!-- ============ FREEZE OVERLAY ============ -->
+<div id="freeze" class="hidden">
+  <div>
+    <div class="fz-ico">🧊</div>
+    <h1>FREEZE</h1>
+    <div class="fz-sub">decoy box opened — −2 points</div>
+    <div class="fz-count">15</div>
+  </div>
+</div>
+
+<!-- ============ PURGE / SECURED ============ -->
+<div id="purge" class="hidden"></div>
+<div id="secureflash" class="hidden"></div>
+
+<div id="secured" class="hidden">
+  <div class="s-inner">
+    <div class="s-shield">🛡</div>
+    <h1>SYSTEM SECURED</h1>
+    <div class="s-sub">
+      Virus neutralised. All files restored. Persistence removed.
+    </div>
+    <div class="s-stat">
+      <div><div class="k">Files restored</div><div class="v">11,597</div></div>
+      <div><div class="k">Threats removed</div><div class="v">2</div></div>
+      <div><div class="k">Status</div><div class="v">CLEAN</div></div>
+    </div>
+    <div class="s-done">Checkpoint complete — report to your facilitator</div>
+  </div>
+</div>
+
+<!-- ============ TIME UP ============ -->
+<div id="timeup" class="hidden">
+  <div>
+    <h1>TIME UP</h1>
+    <p>Stop what you are doing and report to your facilitator.</p>
+  </div>
+</div>
+
+<!-- ============ SCRIPTS ============ -->
+<script src="js/icons.js"></script>
+<script src="js/data.js"></script>
+<script src="js/wm.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/apps/mail.js"></script>
+<script src="js/apps/chatx.js"></script>
+<script src="js/apps/override.js"></script>
+<script src="js/apps/atmos.js"></script>
+<script src="js/boot.js"></script>
+</body>
+</html>

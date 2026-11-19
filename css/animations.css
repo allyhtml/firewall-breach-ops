@@ -1,0 +1,395 @@
+/* ============================================================
+   FIREWALL BREACH OPS - Animations, boot, breach, secured
+   ============================================================ */
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  15% { transform: translateX(-7px); }
+  30% { transform: translateX(6px); }
+  45% { transform: translateX(-5px); }
+  60% { transform: translateX(4px); }
+  75% { transform: translateX(-2px); }
+}
+
+/* ---------- Boot screen ---------- */
+#boot {
+  position: fixed;
+  inset: 0;
+  background: #03060b;
+  z-index: 5000;
+  padding: 40px 46px;
+  font-family: var(--mono);
+  font-size: 13px;
+  line-height: 1.9;
+  color: #4b6b8a;
+  overflow: hidden;
+  white-space: pre-wrap;
+  user-select: none;
+}
+#boot .b-brand {
+  color: var(--cyan);
+  font-size: 19px;
+  font-weight: 800;
+  letter-spacing: .34em;
+  margin-bottom: 20px;
+  display: block;
+}
+#boot .b-ok { color: var(--green); }
+#boot .b-warn { color: var(--amber); }
+#boot .b-err { color: var(--red); }
+#boot .b-cursor {
+  display: inline-block;
+  width: 8px;
+  height: 15px;
+  background: var(--cyan);
+  vertical-align: -2px;
+  animation: blink 1s step-end infinite;
+}
+@keyframes blink { 50% { opacity: 0; } }
+
+#boot.fade { animation: bootFade .6s ease forwards; }
+@keyframes bootFade { to { opacity: 0; visibility: hidden; } }
+
+/* ---------- Breach takeover ---------- */
+#breach {
+  position: fixed;
+  inset: 0;
+  z-index: 4800;
+  display: grid;
+  place-items: center;
+  background: radial-gradient(ellipse at center, rgba(70, 8, 20, .97), rgba(6, 2, 6, .99));
+  overflow: hidden;
+  animation: breachIn .5s ease;
+}
+@keyframes breachIn { from { opacity: 0; } to { opacity: 1; } }
+
+#breach .scanlines {
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    rgba(244, 63, 94, .07) 0px,
+    rgba(244, 63, 94, .07) 1px,
+    transparent 1px,
+    transparent 3px
+  );
+  pointer-events: none;
+  animation: scanShift 8s linear infinite;
+}
+@keyframes scanShift { to { background-position: 0 300px; } }
+
+#breach .breach-inner {
+  position: relative;
+  text-align: center;
+  max-width: 900px;
+  padding: 0 30px;
+}
+
+#breach .skull {
+  font-size: 84px;
+  line-height: 1;
+  margin-bottom: 14px;
+  filter: drop-shadow(0 0 40px rgba(244, 63, 94, .9));
+  animation: floatSkull 3s ease-in-out infinite;
+}
+@keyframes floatSkull {
+  0%, 100% { transform: translateY(0) rotate(-2deg); }
+  50% { transform: translateY(-9px) rotate(2deg); }
+}
+
+#breach h1 {
+  font-size: clamp(38px, 7.4vw, 86px);
+  font-weight: 900;
+  letter-spacing: .06em;
+  line-height: 1.02;
+  color: #ffe4e6;
+  text-shadow:
+    0 0 22px rgba(244, 63, 94, .9),
+    0 0 70px rgba(244, 63, 94, .55),
+    3px 0 0 rgba(34, 211, 238, .65),
+    -3px 0 0 rgba(251, 191, 36, .45);
+  animation: glitchText 3.4s infinite;
+}
+@keyframes glitchText {
+  0%, 88%, 100% { transform: translate(0, 0); }
+  89% { transform: translate(-4px, 1px); }
+  90% { transform: translate(4px, -1px); }
+  91% { transform: translate(-2px, -2px); }
+  92% { transform: translate(2px, 2px); }
+  93% { transform: translate(0, 0); }
+}
+
+#breach .br-sub {
+  margin-top: 22px;
+  font-size: clamp(14px, 1.8vw, 19px);
+  color: #fda4af;
+  letter-spacing: .06em;
+  line-height: 1.7;
+}
+#breach .br-sub b { color: #ffe4e6; }
+
+#breach .br-bar {
+  margin: 34px auto 0;
+  width: min(560px, 80vw);
+  height: 7px;
+  border-radius: 99px;
+  background: rgba(244, 63, 94, .16);
+  overflow: hidden;
+  border: 1px solid rgba(244, 63, 94, .35);
+}
+#breach .br-bar > div {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, #f43f5e, #fb923c);
+  box-shadow: 0 0 18px rgba(244, 63, 94, .9);
+  transition: width .2s linear;
+}
+#breach .br-pct {
+  margin-top: 10px;
+  font-family: var(--mono);
+  font-size: 12px;
+  letter-spacing: .18em;
+  color: #fb7185;
+}
+#breach .br-btn {
+  margin-top: 32px;
+  padding: 15px 46px;
+  border-radius: 11px;
+  font-size: 13.5px;
+  font-weight: 800;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+  border: 1.5px solid rgba(251, 113, 133, .8);
+  color: #fff1f2;
+  background: linear-gradient(180deg, rgba(225, 29, 72, .9), rgba(159, 18, 57, .9));
+  box-shadow: 0 0 40px rgba(244, 63, 94, .55);
+  transition: all .18s;
+  opacity: 0;
+  pointer-events: none;
+}
+#breach .br-btn.ready { opacity: 1; pointer-events: auto; }
+#breach .br-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 0 60px rgba(244, 63, 94, .85);
+}
+#breach .br-hint {
+  margin-top: 16px;
+  font-size: 11px;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  color: rgba(253, 164, 175, .55);
+}
+
+/* ---------- Ransom note ---------- */
+.ransom {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background:
+    repeating-linear-gradient(0deg, rgba(244, 63, 94, .04) 0 1px, transparent 1px 4px),
+    #12060a;
+  padding: 24px 30px;
+  overflow-y: auto;
+}
+.ransom h1 {
+  font-family: var(--mono);
+  font-size: 26px;
+  font-weight: 900;
+  letter-spacing: .1em;
+  color: #fb7185;
+  text-shadow: 0 0 30px rgba(244, 63, 94, .7);
+  animation: glitchText 4s infinite;
+}
+.ransom .r-rule { height: 2px; background: linear-gradient(90deg, #f43f5e, transparent); margin: 14px 0 20px; }
+.ransom p {
+  font-family: var(--mono);
+  font-size: 13px;
+  line-height: 1.95;
+  color: #fda4af;
+  margin-bottom: 14px;
+  user-select: text;
+}
+.ransom p.dim { color: #9f6b78; }
+.ransom .r-box {
+  border: 1px solid rgba(244, 63, 94, .45);
+  background: rgba(244, 63, 94, .08);
+  border-radius: 9px;
+  padding: 14px 18px;
+  margin: 18px 0;
+  font-family: var(--mono);
+  font-size: 12.5px;
+  line-height: 2;
+  color: #fecdd3;
+}
+.ransom .r-box b { color: #fff1f2; }
+.ransom .r-timer {
+  font-family: var(--mono);
+  font-size: 32px;
+  font-weight: 800;
+  color: #fff1f2;
+  letter-spacing: .12em;
+  text-align: center;
+  margin: 22px 0 6px;
+  text-shadow: 0 0 40px rgba(244, 63, 94, .9);
+}
+.ransom .r-foot {
+  margin-top: auto;
+  padding-top: 20px;
+  font-size: 11px;
+  color: #7d4552;
+  font-family: var(--mono);
+  letter-spacing: .1em;
+}
+
+/* ---------- Purge / secured ---------- */
+#purge {
+  position: fixed;
+  inset: 0;
+  z-index: 4200;
+  background: #02060a;
+  font-family: var(--mono);
+  font-size: 12px;
+  line-height: 1.85;
+  padding: 34px 40px;
+  color: #4ade80;
+  overflow: hidden;
+  white-space: pre-wrap;
+}
+#purge .p-cy { color: var(--cyan); }
+#purge .p-am { color: var(--amber); }
+#purge .p-rd { color: #fb7185; }
+#purge .p-big {
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: .18em;
+  color: #fff;
+}
+
+#secureflash {
+  position: fixed;
+  inset: 0;
+  z-index: 4300;
+  background: #eafff7;
+  animation: flashOut .8s ease forwards;
+  pointer-events: none;
+}
+@keyframes flashOut { from { opacity: 1; } to { opacity: 0; } }
+
+#secured {
+  position: fixed;
+  inset: 0;
+  z-index: 4250;
+  display: grid;
+  place-items: center;
+  background: radial-gradient(ellipse at center, #052e1f, #020a08 70%);
+  text-align: center;
+  animation: securedIn .7s ease;
+}
+@keyframes securedIn { from { opacity: 0; } to { opacity: 1; } }
+#secured .s-inner { padding: 0 30px; }
+#secured .s-shield {
+  font-size: 92px;
+  line-height: 1;
+  margin-bottom: 16px;
+  filter: drop-shadow(0 0 46px rgba(52, 211, 153, .95));
+  animation: floatSkull 3.4s ease-in-out infinite;
+}
+#secured h1 {
+  font-size: clamp(40px, 7vw, 84px);
+  font-weight: 900;
+  letter-spacing: .1em;
+  color: #ecfdf5;
+  text-shadow: 0 0 30px rgba(52, 211, 153, .95), 0 0 90px rgba(52, 211, 153, .55);
+}
+#secured .s-sub {
+  margin-top: 20px;
+  font-size: clamp(13px, 1.7vw, 17px);
+  color: #6ee7b7;
+  letter-spacing: .08em;
+  line-height: 1.8;
+}
+#secured .s-stat {
+  margin: 30px auto 0;
+  display: inline-flex;
+  gap: 30px;
+  padding: 16px 30px;
+  border-radius: 12px;
+  background: rgba(52, 211, 153, .08);
+  border: 1px solid rgba(52, 211, 153, .35);
+}
+#secured .s-stat div { text-align: center; }
+#secured .s-stat .k {
+  font-size: 9.5px;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+  color: var(--txt-mute);
+  font-weight: 700;
+}
+#secured .s-stat .v {
+  font-family: var(--mono);
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--green);
+  margin-top: 5px;
+}
+#secured .s-done {
+  margin-top: 30px;
+  font-size: 11.5px;
+  letter-spacing: .2em;
+  text-transform: uppercase;
+  color: rgba(110, 231, 183, .6);
+}
+
+/* ---------- TIME UP ---------- */
+#timeup {
+  position: fixed;
+  inset: 0;
+  z-index: 4400;
+  display: grid;
+  place-items: center;
+  background: rgba(4, 6, 10, .97);
+  backdrop-filter: blur(8px);
+  text-align: center;
+}
+#timeup h1 {
+  font-size: clamp(40px, 8vw, 92px);
+  font-weight: 900;
+  letter-spacing: .12em;
+  color: #fbbf24;
+  text-shadow: 0 0 60px rgba(251, 191, 36, .8);
+}
+#timeup p { margin-top: 18px; font-size: 15px; color: var(--txt-dim); letter-spacing: .05em; }
+
+/* ---------- Scan sweep (override) ---------- */
+.scanline {
+  position: absolute;
+  left: 0; right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--cyan), transparent);
+  box-shadow: 0 0 22px var(--cyan);
+  animation: scanSweep 1.6s linear infinite;
+  pointer-events: none;
+  z-index: 6;
+}
+@keyframes scanSweep {
+  from { top: 0; opacity: 0; }
+  10% { opacity: 1; }
+  90% { opacity: 1; }
+  to { top: 100%; opacity: 0; }
+}
+
+/* ---------- Glitch stripes on infected desktop ---------- */
+body.infected #desktop::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    rgba(244, 63, 94, .035) 0 2px,
+    transparent 2px 5px
+  );
+  pointer-events: none;
+  animation: scanShift 6s linear infinite;
+  z-index: 1;
+}
