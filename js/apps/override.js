@@ -305,8 +305,13 @@ const OverrideApp = (() => {
     setTimeout(() => flash.classList.add("hidden"), 900);
 
     document.getElementById("secured").classList.remove("hidden");
-    document.body.classList.remove("infected");
-    document.body.classList.add("secured");
+
+    if (typeof TimerBridge !== "undefined" && TimerBridge.markSecured) {
+      TimerBridge.markSecured();
+    } else {
+      document.body.classList.remove("infected");
+      document.body.classList.add("secured");
+    }
 
     const st = document.getElementById("sb-threat");
     st.textContent = "SYSTEM SECURED";

@@ -1,4 +1,4 @@
-# Checkpoint 4 — Mission: Firewall Breach
+﻿# Checkpoint 4 — Mission: Firewall Breach
 
 **PIC:** Ally
 **Equipment:** Transparent Tupperware × 11 (6 real + 5 decoys), printed box labels, 3 password fragment cards per real box, 1 laptop, 1 projector/screen (optional)
@@ -112,10 +112,27 @@ Note that the decoys are the three most "textbook" phishing tells on purpose. A 
 
 ## Running the station
 
+### 0. Two ways to run it
+
+| | **Server mode** (recommended) | **Static mode** |
+|---|---|---|
+| Start with | `START GAME.bat` | open `index.html` |
+| GM console runs on | **your phone** ✅ | same browser, second tab |
+| Needs | Python on the laptop | nothing |
+| Internet | not needed | not needed (use `dist/`) |
+| Phone support | yes | no |
+
+**Setup (server mode):**
+1. Windows → Settings → Network & Internet → **Mobile hotspot** → On
+2. Phone joins that hotspot
+3. Double-click **`START GAME.bat`** → allow Python on **Private** networks when prompted
+4. Terminal prints a QR code — scan it with the phone
+5. Phone: passphrase `gm2026`
+6. **Check the laptop's bottom-right timer card turns green.** That is the confirmation the link works.
+
 ### 1. Before the team arrives
-- Open `index.html` in Chrome, full screen (F11)
-- Open `gm.html` in a second tab or on your phone
-- Unlock GM with passphrase `gm2026`
+- Game is open on the laptop (the `.bat` opens it)
+- Phone has the GM console, unlocked with `gm2026`
 - Press **Reset all** to clear the previous team
 
 ### 2. When the team sits
@@ -124,8 +141,8 @@ Note that the decoys are the three most "textbook" phishing tells on purpose. A 
 - Say nothing else. Let them explore.
 
 ### 3. When a runner opens a decoy
-- Tap that runner's **Freeze 15s** button on the GM console
-- The game laptop shows a full-screen FREEZE overlay with a countdown
+- Tap that runner's **Freeze 10s** button on the GM console
+- The game laptop shows a full-screen FREEZE overlay counting down from 10
 - **−2 points** is applied automatically
 
 ### 4. If the team gets stuck
@@ -142,9 +159,18 @@ Final score                 base − penalties
 Record final score and finish time. If a team finishes early, note the time — ties break on speed.
 
 ### 6. Between teams
-- GM console → **Reset all**
-- Reload `index.html` in the browser (F5)
+- GM console → **Reset all** (the laptop clears itself, no reload needed)
 - Re-shuffle the boxes and re-check the 6 real boxes still contain their cards
+
+### 7. The timer card (bottom-right of the laptop)
+
+| Shows | Meaning |
+|---|---|
+| Grey `--:--`, grey dot, *No GM link* | Phone not connected — restart `START GAME.bat` |
+| Cyan `14:32`, green dot | Running |
+| Amber | Under 5:00 |
+| Red, pulsing | Under 2:00 |
+| `00:00`, *Time up* | Round over |
 
 ---
 
@@ -154,7 +180,7 @@ Record final score and finish time. If a team finishes early, note the time — 
 |---|---|
 | **Zone separation** — analysts stay at the laptop, runners stay at the boxes | The hint word only appears on the laptop screen. Runners physically cannot know which box to open without being told. |
 | **No brute-force** — runners may only open called boxes | Hints never appear until the analyst clicks the right line. Decoy lids are labelled temptingly so guessing costs points. |
-| **Decoy penalty** — 15s freeze + −2 accuracy | GM console button → live FREEZE overlay on the laptop + automatic score deduction |
+| **Decoy penalty** — 10s freeze + −2 accuracy | GM console button → live FREEZE overlay on the laptop + automatic score deduction |
 | **Card handling** — one card per box, close the lid | Physical; GM observes. The vault rejects duplicate fragments so hoarding gains nothing. |
 | **Laptop integrity** — no deleting/renaming/modifying | Everything runs in the browser. Nothing on the laptop's real file system is touched. |
 
@@ -175,12 +201,17 @@ The message you want: **urgency, requests for codes, and unknown numbers are the
 
 | Problem | Fix |
 |---|---|
-| Timer not moving on the laptop | The GM console must be open in the same browser on the same device. Press **Start** again. |
-| Freeze overlay won't go away | It clears itself after 15s. Reload if stuck. |
+| Timer not moving on the laptop | Check the timer-card dot is green. If grey, the phone link is down — restart `START GAME.bat`. |
+| Freeze overlay won't go away | It clears itself after 10s. Reload if stuck. |
+| Timer card grey, *No GM link* | Phone and laptop not on the same hotspot, or the server isn't running. Restart `START GAME.bat`. |
+| Card shows `--:--` but dot is green | Press **Start** on the phone. |
+| Freeze does nothing on the laptop | The timer-card dot must be green. Grey = the link is down. |
+| Freeze overlay won't go away | It clears itself after 10s. Reload if stuck. |
 | A team's fragments won't be accepted | Type each fragment into its own box in the System Override app — the box turns green when accepted. Case-insensitive, any order, only `FRM`, `26`, `XP` are valid. Check the cards were printed correctly. |
 | Override code rejected | It is `FRM-26-XP`. The dashes matter. The code field unlocks only after all three fragment boxes are green. |
-| Game already ended (secured screen) | GM → Reset all, then reload `index.html`. |
-| No internet at the venue | Use `dist/firewall-breach.html` — single file, works offline, double-click to play. GM console in that build is at the `#gm` route. |
+| Game already ended (secured screen) | GM → Reset all. The laptop clears itself; F5 only if it doesn't. |
+| Phone can't open the GM URL | Hotspot must be ON and the phone joined it. Use a normal browser tab, not an in-app browser. |
+| No internet at the venue | Either run `START GAME.bat` (no internet needed) or use `dist/firewall-breach.html` — single file, GM console at the `#gm` route (same browser only). |
 
 ---
 
@@ -188,12 +219,16 @@ The message you want: **urgency, requests for codes, and unknown numbers are the
 
 ```
 Firewall Breach Ops/
-├─ index.html                  game (open this)
-├─ gm.html                     GM console
-├─ dist/firewall-breach.html   offline single-file fallback
-├─ docs/BOX_LABELS.pdf         print this for the boxes
-├─ docs/GM_BRIEF.md            this file
-└─ docs/FACILITATOR_RUNSHEET.md  one-page checklist
+├─ START GAME.bat               start server + open the game (recommended)
+├─ index.html                   game
+├─ gm.html                      GM console
+├─ tools/server.py              local server (phone sync)
+├─ dist/firewall-breach.html    offline single-file fallback
+├─ docs/BOX_LABELS.pdf          print this for the boxes
+├─ docs/GM_BRIEF.md             this file
+└─ docs/FACILITATOR_RUNSHEET.md one-page checklist
 ```
 
 GM passphrase: **`gm2026`**
+Server port: **7331**
+

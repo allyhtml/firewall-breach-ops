@@ -750,7 +750,7 @@
 #freeze {
   position: absolute;
   inset: 0;
-  z-index: 3000;
+  z-index: 4600;
   display: grid;
   place-items: center;
   background: rgba(10, 4, 8, .95);

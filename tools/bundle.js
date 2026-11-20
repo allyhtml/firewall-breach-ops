@@ -25,6 +25,7 @@ const css = [
 const jsOrder = [
   "js/icons.js",
   "js/data.js",
+  "js/sync.js",
   "js/wm.js",
   "js/ui.js",
   "js/apps/mail.js",

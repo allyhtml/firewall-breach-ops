@@ -173,8 +173,8 @@ const Game = (() => {
       if (e.key === "Escape") Hints.hideCard();
     });
 
-    /* GM freeze bridge polls */
-    setInterval(() => TimerBridge.checkState(), 1200);
+    /* GM freeze bridge polls (Sync owns the cadence, this is a safety net) */
+    setInterval(() => TimerBridge.checkState(), 1500);
   }
 
   return { start };

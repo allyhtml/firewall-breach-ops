@@ -153,6 +153,7 @@ body.secured .sb-threat {
   gap: 6px;
   border: 1px solid transparent;
   transition: background .12s, border-color .12s, transform .12s;
+  position: relative;
 }
 .icon:hover { background: rgba(34, 211, 238, .07); border-color: rgba(34, 211, 238, .22); transform: translateY(-1px); }
 .icon:active { transform: translateY(0) scale(.97); }
@@ -169,7 +170,8 @@ body.secured .sb-threat {
 .icon.dead:hover { background: none; border-color: transparent; transform: none; }
 .icon .badge {
   position: absolute;
-  margin: -34px 0 0 26px;
+  top: 4px;
+  right: 6px;
   min-width: 17px; height: 17px;
   border-radius: 99px;
   background: var(--red);
@@ -311,6 +313,69 @@ body.secured .sb-threat {
   cursor: nwse-resize;
   z-index: 5;
 }
+
+/* ---------- Floating timer card ---------- */
+#timerCard {
+  position: absolute;
+  right: 14px;
+  bottom: 60px;
+  width: 172px;
+  padding: 10px 14px 11px;
+  border-radius: 13px;
+  background: rgba(9, 14, 24, .93);
+  border: 1px solid var(--line-2);
+  box-shadow: 0 12px 34px rgba(0, 0, 0, .6);
+  backdrop-filter: blur(10px);
+  z-index: 860;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  transition: border-color .3s, box-shadow .3s;
+}
+#timerCard .tc-top {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+#timerCard .tc-dot {
+  width: 7px; height: 7px;
+  border-radius: 99px;
+  background: var(--mute);
+  flex: none;
+  transition: background .3s, box-shadow .3s;
+}
+#timerCard.linked .tc-dot {
+  background: var(--green);
+  box-shadow: 0 0 9px var(--green);
+}
+#timerCard.unlinked .tc-dot {
+  background: var(--red);
+  box-shadow: 0 0 9px rgba(244, 63, 94, .7);
+}
+#timerCard .tc-label {
+  font-size: 8.5px;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+  font-weight: 800;
+  color: var(--txt-mute);
+}
+#timerCard .tc-time {
+  font-family: var(--mono);
+  font-size: 34px;
+  font-weight: 800;
+  line-height: 1.05;
+  letter-spacing: .02em;
+  color: var(--txt);
+  transition: color .3s;
+  font-variant-numeric: tabular-nums;
+}
+#timerCard.warn { border-color: rgba(251, 191, 36, .5); }
+#timerCard.warn .tc-time { color: var(--amber); }
+#timerCard.crit { border-color: rgba(244, 63, 94, .6); box-shadow: 0 12px 34px rgba(0,0,0,.6), 0 0 26px rgba(244, 63, 94, .28); }
+#timerCard.crit .tc-time { color: var(--red); animation: tcpulse 1s ease-in-out infinite; }
+#timerCard.done .tc-time { color: var(--amber); }
+#timerCard.unlinked .tc-time { color: var(--txt-mute); }
+@keyframes tcpulse { 50% { opacity: .42; } }
 
 /* ---------- Toast ---------- */
 #toasts {

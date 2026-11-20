@@ -138,20 +138,19 @@ const Hints = (() => {
   };
 })();
 
+
 /* ============================================================
-   Timer bridge - reads master clock written by GM console
+   Timer bridge - consumes state from Sync (server or localStorage)
+   Owns: timer card, connection dot, freeze, time-up, force-secure
    ============================================================ */
 const TimerBridge = (() => {
-  const KEY = "fb_gm_timer";
-  let tick = null;
+  let renderTimer = null;
+  let freezeTimer = null;
+  let lastFreezeSeen = 0;
+  let lastForceSecureSeen = 0;
+  let timeUpShown = false;
 
-  function read() {
-    try {
-      const raw = localStorage.getItem(KEY);
-      if (!raw) return null;
-      return JSON.parse(raw);
-    } catch { return null; }
-  }
+  const TOTAL_MS = 15 * 60 * 1000;
 
   function fmt(ms) {
     if (ms < 0) ms = 0;
@@ -159,55 +158,107 @@ const TimerBridge = (() => {
     return String(Math.floor(s / 60)).padStart(2, "0") + ":" + String(s % 60).padStart(2, "0");
   }
 
-  function start() {
-    const clock = document.getElementById("clock");
-    tick = setInterval(() => {
-      const now = new Date();
-      const t = now.getHours().toString().padStart(2, "0") + ":" + now.getMinutes().toString().padStart(2, "0");
-      const st = read();
-      if (st && st.running && st.endsAt) {
-        const left = st.endsAt - Date.now();
-        clock.textContent = fmt(left);
-        clock.style.color = left < 120000 ? "var(--red)" : left < 300000 ? "var(--amber)" : "var(--txt)";
-        if (left <= 0 && !window.__timeupShown) {
-          window.__timeupShown = true;
-          showTimeUp();
-        }
-      } else {
-        clock.textContent = t;
-        clock.style.color = "var(--txt)";
-      }
-    }, 500);
+  function el(id) { return document.getElementById(id); }
 
-    window.addEventListener("storage", (e) => {
-      if (e.key === KEY) checkState();
-    });
+  /* ---------------- start ---------------- */
+  async function start() {
+    await Sync.start();
+    Sync.onChange(apply);
+    apply(Sync.state());
+    renderTimer = setInterval(paint, 250);
   }
 
-  let lastFreezeSeen = 0;
+  /* ---------------- consume state ---------------- */
+  function apply(st) {
+    if (!st) { paint(); return; }
 
-  function checkState() {
-    const st = read();
-    if (!st) return;
+    /* freeze */
     if (st.freezeUntil && st.freezeUntil > lastFreezeSeen && Date.now() < st.freezeUntil) {
       lastFreezeSeen = st.freezeUntil;
       showFreeze(st.freezeUntil, st.freezeRunner || "Runner");
     }
-    if (st.forceSecure && st.forceSecure > (window.__forceSecureSeen || 0)) {
-      window.__forceSecureSeen = st.forceSecure;
-      if (!document.getElementById("secured").classList.contains("hidden")) return;
-      document.getElementById("secured").classList.remove("hidden");
-      document.body.classList.remove("infected");
-      document.body.classList.add("secured");
-      const t = document.getElementById("sb-threat");
-      if (t) t.textContent = "SYSTEM SECURED";
+
+    /* force-secure from GM */
+    if (st.forceSecure && st.forceSecure > lastForceSecureSeen) {
+      lastForceSecureSeen = st.forceSecure;
+      forceSecure();
     }
+
+    /* time up flag (End round) */
+    if (st.timeUp && !timeUpShown) showTimeUp();
+    if (!st.timeUp && timeUpShown) clearTimeUp();
+
+    paint();
   }
 
-  let freezeTimer = null;
+  /* ---------------- paint the timer card ---------------- */
+  function paint() {
+    const card = el("timerCard");
+    const clock = el("clock");
+    if (!card) return;
+
+    const st = Sync.state();
+    const linked = Sync.isLinked();
+
+    card.classList.toggle("linked", linked);
+    card.classList.toggle("unlinked", !linked);
+
+    const dotTip = linked
+      ? "GM console connected"
+      : "GM console not connected — open gm.html in this browser";
+
+    const timeEl = card.querySelector(".tc-time");
+    const labelEl = card.querySelector(".tc-label");
+    card.title = dotTip;
+
+    if (!st || (!st.running && !st.endsAt && !st.timeUp)) {
+      /* no timer ever started */
+      card.classList.remove("warn", "crit", "done");
+      timeEl.textContent = "--:--";
+      labelEl.textContent = linked ? "Timer idle" : "No GM link";
+      if (clock) { clock.textContent = wallClock(); clock.style.color = "var(--txt)"; }
+      return;
+    }
+
+    if (st.timeUp) {
+      card.classList.remove("warn", "crit");
+      card.classList.add("done");
+      timeEl.textContent = "00:00";
+      labelEl.textContent = "Time up";
+      if (clock) { clock.textContent = "00:00"; clock.style.color = "var(--amber)"; }
+      return;
+    }
+
+    const left = st.running
+      ? Math.max(0, st.endsAt - Date.now())
+      : Math.max(0, st.remaining || 0);
+
+    card.classList.remove("done");
+    card.classList.toggle("crit", left <= 120000);
+    card.classList.toggle("warn", left > 120000 && left <= 300000);
+
+    const txt = fmt(left);
+    timeEl.textContent = txt;
+    labelEl.textContent = st.running ? "Time left" : "Paused";
+    if (clock) {
+      clock.textContent = txt;
+      clock.style.color = left <= 120000 ? "var(--red)" : left <= 300000 ? "var(--amber)" : "var(--txt)";
+    }
+
+    /* natural expiry */
+    if (st.running && left <= 0 && !timeUpShown) showTimeUp();
+  }
+
+  function wallClock() {
+    const d = new Date();
+    return String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0");
+  }
+
+  /* ---------------- freeze ---------------- */
   function showFreeze(until, runner) {
-    const f = document.getElementById("freeze");
-    f.querySelector(".fz-sub").textContent = `${runner} opened a decoy box — −2 points`;
+    const f = el("freeze");
+    if (!f) return;
+    f.querySelector(".fz-sub").textContent = `${runner} opened a decoy box — -2 points`;
     f.classList.remove("hidden");
     clearInterval(freezeTimer);
     const upd = () => {
@@ -222,12 +273,49 @@ const TimerBridge = (() => {
     freezeTimer = setInterval(upd, 200);
   }
 
+  /* ---------------- time up ---------------- */
   function showTimeUp() {
-    if (document.getElementById("secured").classList.contains("hidden") === false) return;
-    document.getElementById("timeup").classList.remove("hidden");
+    const securedVisible = el("secured") && !el("secured").classList.contains("hidden");
+    if (securedVisible) return;
+    timeUpShown = true;
+    const t = el("timeup");
+    if (t) t.classList.remove("hidden");
   }
 
-  function stop() { clearInterval(tick); }
+  function clearTimeUp() {
+    timeUpShown = false;
+    const t = el("timeup");
+    if (t) t.classList.add("hidden");
+  }
 
-  return { start, read, checkState, showFreeze, stop };
+  /* ---------------- force secure ---------------- */
+  function forceSecure() {
+    if (!document.body.classList.contains("secured")) {
+      document.body.classList.remove("infected");
+      document.body.classList.add("secured");
+    }
+    const s = el("secured");
+    if (s && s.classList.contains("hidden")) s.classList.remove("hidden");
+    const threat = el("sb-threat");
+    if (threat) threat.textContent = "SYSTEM SECURED";
+    clearTimeUp();
+  }
+
+  /* called by the game when the team actually finishes */
+  function markSecured() {
+    clearTimeUp();
+    document.body.classList.add("secured");
+    document.body.classList.remove("infected");
+    const threat = el("sb-threat");
+    if (threat) threat.textContent = "SYSTEM SECURED";
+  }
+
+  function checkState() { Sync.pollOnce(); }
+
+  function stop() {
+    clearInterval(renderTimer);
+    clearInterval(freezeTimer);
+  }
+
+  return { start, checkState, showFreeze, stop, markSecured, forceSecure };
 })();

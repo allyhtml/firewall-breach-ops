@@ -1,4 +1,4 @@
-# Firewall Breach Ops
+﻿# Firewall Breach Ops
 
 A physical + digital escape-room checkpoint for a cyber-security explorace.
 
@@ -29,11 +29,23 @@ Cyber Analysts sit at a fake infected laptop, read emails and chat messages, cli
 
 ## Play it
 
-| | |
-|---|---|
-| **Game** | open `index.html` (or the live URL) |
-| **GM console** | `gm.html` — passphrase `gm2026` |
-| **Offline** | `dist/firewall-breach.html` — double-click, no internet needed. GM console at `#gm` |
+Two ways to run it — the app auto-detects which mode it's in.
+
+| Mode | Start with | GM console runs on |
+|---|---|---|
+| **Server** (recommended) | double-click `START GAME.bat` | **your phone** — scan the QR in the terminal |
+| **Static** | open `index.html` | the same browser, second tab |
+| **Offline** | `dist/firewall-breach.html` | `#gm` route (same browser only) |
+
+```
+Game        index.html
+GM console  gm.html          passphrase gm2026
+Server      tools/server.py  port 7331, stdlib only
+```
+
+In server mode the laptop and the phone share state through the Python server, so all GM controls (timer, decoy freeze, force-secure, reset) work from the phone. The laptop's bottom-right **timer card** shows a green dot when the link is live and red *No GM link* when it isn't.
+
+> Phone setup: turn on Windows **Mobile hotspot**, join it with the phone, run `START GAME.bat`, allow Python on **Private** networks.
 
 ---
 
@@ -74,9 +86,12 @@ Print `docs/BOX_LABELS.pdf`, tape front to the lid and back inside.
 
 ## Build
 
-No dependencies. Everything is plain HTML/CSS/JS.
+No dependencies. Everything is plain HTML/CSS/JS (and one stdlib Python server).
 
 ```bash
+# run the game + phone GM locally
+python tools/server.py
+
 # regenerate the printable box labels (pure-stdlib Python)
 python tools/make_labels.py
 
@@ -87,14 +102,15 @@ node tools/bundle.js
 ### Project layout
 
 ```
+START GAME.bat    start server + open the game (recommended)
 index.html        game shell (GitHub Pages root)
 gm.html           GM console
-css/              desktop.css · apps.css · animations.css
-js/               icons · data (answer key) · wm · ui (hint engine)
-js/apps/          mail · chatx · override · atmos
-tools/            make_labels.py · bundle.js
+css/              desktop.css / apps.css / animations.css
+js/               icons / data (answer key) / sync / wm / ui
+js/apps/          mail / chatx / override / atmos
+tools/            server.py / make_labels.py / bundle.js
 docs/             briefs + printable labels
-dist/             offline single-file build + screenshots
+dist/             offline single-file build
 ```
 
 ---
@@ -103,7 +119,7 @@ dist/             offline single-file build + screenshots
 
 - **Hints** are the only thing that unlocks box knowledge — nothing about the boxes exists in the page until an analyst clicks the correct sentence.
 - **Wrong clicks** are free twice per message, then the message locks for 5 seconds.
-- **Decoys** are logged by the GM console, which pushes a 15-second full-screen freeze to the game laptop and deducts 2 points.
+- **Decoys** are logged by the GM console, which pushes a 10-second full-screen freeze to the game laptop and deducts 2 points.
 - **Fragments** can be entered in any order; the code field stays locked until all three are loaded.
 - **KILL THE VIRUS** stays disabled until the override code is accepted.
 
@@ -119,3 +135,4 @@ mails / chats  // messages; a trap line is { cls:"trap", hint:"...", text:"..." 
 
 GM passphrase is the `PASS` constant in `gm.html` (and is baked into `dist/` on rebuild).
 Timer length is set in `gm.html` (`15 * 60 * 1000`).
+

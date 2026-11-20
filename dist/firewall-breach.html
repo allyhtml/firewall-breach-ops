@@ -160,6 +160,7 @@ body.secured .sb-threat {
   gap: 6px;
   border: 1px solid transparent;
   transition: background .12s, border-color .12s, transform .12s;
+  position: relative;
 }
 .icon:hover { background: rgba(34, 211, 238, .07); border-color: rgba(34, 211, 238, .22); transform: translateY(-1px); }
 .icon:active { transform: translateY(0) scale(.97); }
@@ -176,7 +177,8 @@ body.secured .sb-threat {
 .icon.dead:hover { background: none; border-color: transparent; transform: none; }
 .icon .badge {
   position: absolute;
-  margin: -34px 0 0 26px;
+  top: 4px;
+  right: 6px;
   min-width: 17px; height: 17px;
   border-radius: 99px;
   background: var(--red);
@@ -318,6 +320,69 @@ body.secured .sb-threat {
   cursor: nwse-resize;
   z-index: 5;
 }
+
+/* ---------- Floating timer card ---------- */
+#timerCard {
+  position: absolute;
+  right: 14px;
+  bottom: 60px;
+  width: 172px;
+  padding: 10px 14px 11px;
+  border-radius: 13px;
+  background: rgba(9, 14, 24, .93);
+  border: 1px solid var(--line-2);
+  box-shadow: 0 12px 34px rgba(0, 0, 0, .6);
+  backdrop-filter: blur(10px);
+  z-index: 860;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  transition: border-color .3s, box-shadow .3s;
+}
+#timerCard .tc-top {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+#timerCard .tc-dot {
+  width: 7px; height: 7px;
+  border-radius: 99px;
+  background: var(--mute);
+  flex: none;
+  transition: background .3s, box-shadow .3s;
+}
+#timerCard.linked .tc-dot {
+  background: var(--green);
+  box-shadow: 0 0 9px var(--green);
+}
+#timerCard.unlinked .tc-dot {
+  background: var(--red);
+  box-shadow: 0 0 9px rgba(244, 63, 94, .7);
+}
+#timerCard .tc-label {
+  font-size: 8.5px;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+  font-weight: 800;
+  color: var(--txt-mute);
+}
+#timerCard .tc-time {
+  font-family: var(--mono);
+  font-size: 34px;
+  font-weight: 800;
+  line-height: 1.05;
+  letter-spacing: .02em;
+  color: var(--txt);
+  transition: color .3s;
+  font-variant-numeric: tabular-nums;
+}
+#timerCard.warn { border-color: rgba(251, 191, 36, .5); }
+#timerCard.warn .tc-time { color: var(--amber); }
+#timerCard.crit { border-color: rgba(244, 63, 94, .6); box-shadow: 0 12px 34px rgba(0,0,0,.6), 0 0 26px rgba(244, 63, 94, .28); }
+#timerCard.crit .tc-time { color: var(--red); animation: tcpulse 1s ease-in-out infinite; }
+#timerCard.done .tc-time { color: var(--amber); }
+#timerCard.unlinked .tc-time { color: var(--txt-mute); }
+@keyframes tcpulse { 50% { opacity: .42; } }
 
 /* ---------- Toast ---------- */
 #toasts {
@@ -1113,7 +1178,7 @@ body.secured .sb-threat {
 #freeze {
   position: absolute;
   inset: 0;
-  z-index: 3000;
+  z-index: 4600;
   display: grid;
   place-items: center;
   background: rgba(10, 4, 8, .95);
@@ -1639,6 +1704,15 @@ button:disabled{opacity:.3;cursor:not-allowed;box-shadow:none}
   <div id="hintbar"></div>
   <div id="toasts"></div>
 
+  <!-- ============ FLOATING TIMER ============ -->
+  <div id="timerCard">
+    <div class="tc-top">
+      <span class="tc-dot"></span>
+      <span class="tc-label">No GM link</span>
+    </div>
+    <div class="tc-time">--:--</div>
+  </div>
+
   <div id="taskbar">
     <div id="tasklist"></div>
   </div>
@@ -2092,6 +2166,160 @@ const GameData = {
 
 
 /* ============================================================
+   FIREWALL BREACH OPS - Sync layer
+   Two modes, auto-detected:
+     SERVER     -> shared state via /api/state  (phone GM works)
+     LOCAL      -> localStorage                 (GitHub Pages, same browser)
+   The rest of the game only talks to Sync.
+   ============================================================ */
+
+const Sync = (() => {
+  const LS_KEY = "fb_gm_timer";
+  let mode = "local";          // "server" | "local"
+  let lastState = null;
+  let lastBeat = 0;
+  let pollTimer = null;
+  let errorStreak = 0;
+  const listeners = [];
+
+  /* ---------- state shape (shared by both modes) ----------
+     {
+       running, endsAt, remaining,
+       freezeUntil, freezeRunner,
+       timeUp, forceSecure,
+       beat
+     }
+  --------------------------------------------------------- */
+
+  function normalize(raw) {
+    if (!raw || typeof raw !== "object") return null;
+    return {
+      running: !!raw.running,
+      endsAt: Number(raw.endsAt) || 0,
+      remaining: Number(raw.remaining) || 0,
+      freezeUntil: Number(raw.freezeUntil) || 0,
+      freezeRunner: raw.freezeRunner || "",
+      timeUp: !!raw.timeUp,
+      forceSecure: Number(raw.forceSecure) || 0,
+      beat: Number(raw.beat) || 0
+    };
+  }
+
+  function readLocal() {
+    try {
+      const raw = localStorage.getItem(LS_KEY);
+      if (!raw) return null;
+      return normalize(JSON.parse(raw));
+    } catch { return null; }
+  }
+
+  /* ---------- detect server ---------- */
+  async function detect() {
+    /* file:// and static hosting have no API - skip the probe entirely */
+    if (location.protocol === "file:") {
+      mode = "local";
+      return mode;
+    }
+    try {
+      const ctrl = new AbortController();
+      const t = setTimeout(() => ctrl.abort(), 1200);
+      const res = await fetch("api/state", { signal: ctrl.signal, cache: "no-store" });
+      clearTimeout(t);
+      if (res.ok) {
+        const data = await res.json();
+        const st = normalize(data);
+        if (st) {
+          mode = "server";
+          lastState = st;
+          lastBeat = Date.now();
+          return mode;
+        }
+      }
+    } catch { /* not server mode */ }
+    mode = "local";
+    return mode;
+  }
+
+  /* ---------- poll ---------- */
+  async function pollOnce() {
+    if (mode === "server") {
+      try {
+        const res = await fetch("api/state", { cache: "no-store" });
+        if (!res.ok) throw new Error("bad status");
+        const st = normalize(await res.json());
+        errorStreak = 0;
+        if (st) {
+          lastState = st;
+          lastBeat = Date.now();
+          emit(st);
+        }
+      } catch {
+        errorStreak++;
+        if (errorStreak > 8) setMode("local");
+      }
+      return;
+    }
+
+    /* local mode: read localStorage */
+    const st = readLocal();
+    if (st) {
+      lastState = st;
+      lastBeat = Date.now();
+      emit(st);
+    }
+  }
+
+  function setMode(m) {
+    if (mode === m) return;
+    mode = m;
+    console.warn("[Sync] falling back to", m, "mode");
+  }
+
+  function emit(st) {
+    listeners.forEach(fn => {
+      try { fn(st); } catch (e) { console.error(e); }
+    });
+  }
+
+  /* ---------- public ---------- */
+  async function start() {
+    await detect();
+    setupInstant();
+    pollOnce();
+    clearInterval(pollTimer);
+    pollTimer = setInterval(pollOnce, mode === "server" ? 400 : 700);
+    return mode;
+  }
+
+  /* instant delivery in local mode when both pages share a browser */
+  function setupInstant() {
+    window.addEventListener("storage", (e) => {
+      if (mode === "local" && e.key === LS_KEY) pollOnce();
+    });
+    try {
+      const bc = new BroadcastChannel("fb_gm");
+      bc.onmessage = () => { if (mode === "local") pollOnce(); };
+    } catch { /* unsupported */ }
+  }
+
+  function onChange(fn) { listeners.push(fn); }
+
+  function state() { return lastState; }
+
+  /* is the GM actually alive? (heartbeat fresh) */
+  function isLinked() {
+    if (!lastState) return false;
+    if (!lastState.beat) return mode === "server";
+    return (Date.now() - lastState.beat) < 6000;
+  }
+
+  function currentMode() { return mode; }
+
+  return { start, onChange, state, isLinked, currentMode, pollOnce };
+})();
+
+
+/* ============================================================
    FIREWALL BREACH OPS - Window Manager
    ============================================================ */
 
@@ -2423,20 +2651,19 @@ const Hints = (() => {
   };
 })();
 
+
 /* ============================================================
-   Timer bridge - reads master clock written by GM console
+   Timer bridge - consumes state from Sync (server or localStorage)
+   Owns: timer card, connection dot, freeze, time-up, force-secure
    ============================================================ */
 const TimerBridge = (() => {
-  const KEY = "fb_gm_timer";
-  let tick = null;
+  let renderTimer = null;
+  let freezeTimer = null;
+  let lastFreezeSeen = 0;
+  let lastForceSecureSeen = 0;
+  let timeUpShown = false;
 
-  function read() {
-    try {
-      const raw = localStorage.getItem(KEY);
-      if (!raw) return null;
-      return JSON.parse(raw);
-    } catch { return null; }
-  }
+  const TOTAL_MS = 15 * 60 * 1000;
 
   function fmt(ms) {
     if (ms < 0) ms = 0;
@@ -2444,55 +2671,107 @@ const TimerBridge = (() => {
     return String(Math.floor(s / 60)).padStart(2, "0") + ":" + String(s % 60).padStart(2, "0");
   }
 
-  function start() {
-    const clock = document.getElementById("clock");
-    tick = setInterval(() => {
-      const now = new Date();
-      const t = now.getHours().toString().padStart(2, "0") + ":" + now.getMinutes().toString().padStart(2, "0");
-      const st = read();
-      if (st && st.running && st.endsAt) {
-        const left = st.endsAt - Date.now();
-        clock.textContent = fmt(left);
-        clock.style.color = left < 120000 ? "var(--red)" : left < 300000 ? "var(--amber)" : "var(--txt)";
-        if (left <= 0 && !window.__timeupShown) {
-          window.__timeupShown = true;
-          showTimeUp();
-        }
-      } else {
-        clock.textContent = t;
-        clock.style.color = "var(--txt)";
-      }
-    }, 500);
+  function el(id) { return document.getElementById(id); }
 
-    window.addEventListener("storage", (e) => {
-      if (e.key === KEY) checkState();
-    });
+  /* ---------------- start ---------------- */
+  async function start() {
+    await Sync.start();
+    Sync.onChange(apply);
+    apply(Sync.state());
+    renderTimer = setInterval(paint, 250);
   }
 
-  let lastFreezeSeen = 0;
+  /* ---------------- consume state ---------------- */
+  function apply(st) {
+    if (!st) { paint(); return; }
 
-  function checkState() {
-    const st = read();
-    if (!st) return;
+    /* freeze */
     if (st.freezeUntil && st.freezeUntil > lastFreezeSeen && Date.now() < st.freezeUntil) {
       lastFreezeSeen = st.freezeUntil;
       showFreeze(st.freezeUntil, st.freezeRunner || "Runner");
     }
-    if (st.forceSecure && st.forceSecure > (window.__forceSecureSeen || 0)) {
-      window.__forceSecureSeen = st.forceSecure;
-      if (!document.getElementById("secured").classList.contains("hidden")) return;
-      document.getElementById("secured").classList.remove("hidden");
-      document.body.classList.remove("infected");
-      document.body.classList.add("secured");
-      const t = document.getElementById("sb-threat");
-      if (t) t.textContent = "SYSTEM SECURED";
+
+    /* force-secure from GM */
+    if (st.forceSecure && st.forceSecure > lastForceSecureSeen) {
+      lastForceSecureSeen = st.forceSecure;
+      forceSecure();
     }
+
+    /* time up flag (End round) */
+    if (st.timeUp && !timeUpShown) showTimeUp();
+    if (!st.timeUp && timeUpShown) clearTimeUp();
+
+    paint();
   }
 
-  let freezeTimer = null;
+  /* ---------------- paint the timer card ---------------- */
+  function paint() {
+    const card = el("timerCard");
+    const clock = el("clock");
+    if (!card) return;
+
+    const st = Sync.state();
+    const linked = Sync.isLinked();
+
+    card.classList.toggle("linked", linked);
+    card.classList.toggle("unlinked", !linked);
+
+    const dotTip = linked
+      ? "GM console connected"
+      : "GM console not connected — open gm.html in this browser";
+
+    const timeEl = card.querySelector(".tc-time");
+    const labelEl = card.querySelector(".tc-label");
+    card.title = dotTip;
+
+    if (!st || (!st.running && !st.endsAt && !st.timeUp)) {
+      /* no timer ever started */
+      card.classList.remove("warn", "crit", "done");
+      timeEl.textContent = "--:--";
+      labelEl.textContent = linked ? "Timer idle" : "No GM link";
+      if (clock) { clock.textContent = wallClock(); clock.style.color = "var(--txt)"; }
+      return;
+    }
+
+    if (st.timeUp) {
+      card.classList.remove("warn", "crit");
+      card.classList.add("done");
+      timeEl.textContent = "00:00";
+      labelEl.textContent = "Time up";
+      if (clock) { clock.textContent = "00:00"; clock.style.color = "var(--amber)"; }
+      return;
+    }
+
+    const left = st.running
+      ? Math.max(0, st.endsAt - Date.now())
+      : Math.max(0, st.remaining || 0);
+
+    card.classList.remove("done");
+    card.classList.toggle("crit", left <= 120000);
+    card.classList.toggle("warn", left > 120000 && left <= 300000);
+
+    const txt = fmt(left);
+    timeEl.textContent = txt;
+    labelEl.textContent = st.running ? "Time left" : "Paused";
+    if (clock) {
+      clock.textContent = txt;
+      clock.style.color = left <= 120000 ? "var(--red)" : left <= 300000 ? "var(--amber)" : "var(--txt)";
+    }
+
+    /* natural expiry */
+    if (st.running && left <= 0 && !timeUpShown) showTimeUp();
+  }
+
+  function wallClock() {
+    const d = new Date();
+    return String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0");
+  }
+
+  /* ---------------- freeze ---------------- */
   function showFreeze(until, runner) {
-    const f = document.getElementById("freeze");
-    f.querySelector(".fz-sub").textContent = `${runner} opened a decoy box — −2 points`;
+    const f = el("freeze");
+    if (!f) return;
+    f.querySelector(".fz-sub").textContent = `${runner} opened a decoy box — -2 points`;
     f.classList.remove("hidden");
     clearInterval(freezeTimer);
     const upd = () => {
@@ -2507,14 +2786,51 @@ const TimerBridge = (() => {
     freezeTimer = setInterval(upd, 200);
   }
 
+  /* ---------------- time up ---------------- */
   function showTimeUp() {
-    if (document.getElementById("secured").classList.contains("hidden") === false) return;
-    document.getElementById("timeup").classList.remove("hidden");
+    const securedVisible = el("secured") && !el("secured").classList.contains("hidden");
+    if (securedVisible) return;
+    timeUpShown = true;
+    const t = el("timeup");
+    if (t) t.classList.remove("hidden");
   }
 
-  function stop() { clearInterval(tick); }
+  function clearTimeUp() {
+    timeUpShown = false;
+    const t = el("timeup");
+    if (t) t.classList.add("hidden");
+  }
 
-  return { start, read, checkState, showFreeze, stop };
+  /* ---------------- force secure ---------------- */
+  function forceSecure() {
+    if (!document.body.classList.contains("secured")) {
+      document.body.classList.remove("infected");
+      document.body.classList.add("secured");
+    }
+    const s = el("secured");
+    if (s && s.classList.contains("hidden")) s.classList.remove("hidden");
+    const threat = el("sb-threat");
+    if (threat) threat.textContent = "SYSTEM SECURED";
+    clearTimeUp();
+  }
+
+  /* called by the game when the team actually finishes */
+  function markSecured() {
+    clearTimeUp();
+    document.body.classList.add("secured");
+    document.body.classList.remove("infected");
+    const threat = el("sb-threat");
+    if (threat) threat.textContent = "SYSTEM SECURED";
+  }
+
+  function checkState() { Sync.pollOnce(); }
+
+  function stop() {
+    clearInterval(renderTimer);
+    clearInterval(freezeTimer);
+  }
+
+  return { start, checkState, showFreeze, stop, markSecured, forceSecure };
 })();
 
 
@@ -3049,8 +3365,13 @@ const OverrideApp = (() => {
     setTimeout(() => flash.classList.add("hidden"), 900);
 
     document.getElementById("secured").classList.remove("hidden");
-    document.body.classList.remove("infected");
-    document.body.classList.add("secured");
+
+    if (typeof TimerBridge !== "undefined" && TimerBridge.markSecured) {
+      TimerBridge.markSecured();
+    } else {
+      document.body.classList.remove("infected");
+      document.body.classList.add("secured");
+    }
 
     const st = document.getElementById("sb-threat");
     st.textContent = "SYSTEM SECURED";
@@ -3410,8 +3731,8 @@ const Game = (() => {
       if (e.key === "Escape") Hints.hideCard();
     });
 
-    /* GM freeze bridge polls */
-    setInterval(() => TimerBridge.checkState(), 1200);
+    /* GM freeze bridge polls (Sync owns the cadence, this is a safety net) */
+    setInterval(() => TimerBridge.checkState(), 1500);
   }
 
   return { start };
@@ -3458,20 +3779,59 @@ let state = load() || {
 function load() {
   try { return JSON.parse(localStorage.getItem(STATE_KEY)); } catch { return null; }
 }
-function save() {
-  localStorage.setItem(STATE_KEY, JSON.stringify(state));
-  push();
+
+/* ---------- transport: server mode if available, else localStorage ---------- */
+let MODE = "local";
+
+async function detectMode() {
+  if (location.protocol === "file:") { MODE = "local"; return; }
+  try {
+    const c = new AbortController();
+    const t = setTimeout(() => c.abort(), 1200);
+    const r = await fetch("api/state", { signal: c.signal, cache: "no-store" });
+    clearTimeout(t);
+    if (r.ok) { MODE = "server"; return; }
+  } catch {}
+  MODE = "local";
 }
-function push() {
+
+/* push current state out */
+async function save() {
+  state.beat = Date.now();
   const payload = {
     running: state.running,
     endsAt: state.endsAt,
     remaining: state.remaining,
     freezeUntil: state.freezeUntil || 0,
     freezeRunner: state.freezeRunner || "",
-    forceSecure: Number(localStorage.getItem("fb_force_secure") || 0)
+    forceSecure: state.forceSecure || 0,
+    timeUp: !!state.timeUp,
+    beat: state.beat
   };
+
+  if (MODE === "server") {
+    try {
+      await fetch("api/state", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+    } catch (e) {
+      console.warn("server push failed, falling back", e);
+      MODE = "local";
+    }
+  }
+
+  /* always mirror to localStorage so same-browser tab works either way */
+  localStorage.setItem(STATE_KEY, JSON.stringify(state));
   localStorage.setItem(KEY, JSON.stringify(payload));
+}
+
+function push() { return save(); }
+
+/* heartbeat so the game knows the GM is alive */
+function startHeartbeat() {
+  setInterval(() => { save(); }, 2000);
 }
 
 /* ---------- timer ---------- */
@@ -3513,6 +3873,7 @@ document.getElementById("btnStart").addEventListener("click", () => {
   if (state.remaining <= 0) state.remaining = 15 * 60 * 1000;
   state.endsAt = Date.now() + state.remaining;
   state.running = true;
+  state.timeUp = false;
   save();
   log("Timer started — 15:00");
 });
@@ -3529,8 +3890,10 @@ document.getElementById("btnEnd").addEventListener("click", () => {
   state.running = false;
   state.remaining = 0;
   state.endsAt = 0;
+  state.timeUp = true;
   save();
-  log("Round ended by GM", "bad");
+  paint();
+  log("Round ended by GM — TIME UP sent to laptop", "bad");
 });
 
 document.getElementById("btnReset").addEventListener("click", () => {
@@ -3544,6 +3907,8 @@ document.getElementById("btnReset").addEventListener("click", () => {
     penalties: 0,
     freezeUntil: 0,
     freezeRunner: "",
+    forceSecure: 0,
+    timeUp: false,
     runners: [
       { name: "Runner 1", decoys: 0 },
       { name: "Runner 2", decoys: 0 },
@@ -3556,8 +3921,11 @@ document.getElementById("btnReset").addEventListener("click", () => {
 });
 
 document.getElementById("btnForceSecure").addEventListener("click", () => {
-  localStorage.setItem("fb_force_secure", String(Date.now()));
-  log("Force-secure signalled", "hi");
+  state.forceSecure = Date.now();
+  state.running = false;
+  state.timeUp = false;
+  save();
+  log("Force-secure sent to laptop", "hi");
 });
 
 document.getElementById("btnMinus2").addEventListener("click", () => {
@@ -3587,7 +3955,7 @@ function paint() {
     <div class="runner">
       <div class="rname">${r.name}</div>
       <div class="rscore">${r.decoys} decoy${r.decoys === 1 ? "" : "s"}</div>
-      <button class="freeze-btn" data-i="${i}">Freeze 15s</button>
+      <button class="freeze-btn" data-i="${i}">Freeze 10s</button>
     </div>
   `).join("");
 
@@ -3597,11 +3965,11 @@ function paint() {
       const r = state.runners[i];
       r.decoys++;
       state.penalties += 2;
-      state.freezeUntil = Date.now() + 15000;
+      state.freezeUntil = Date.now() + 10000;
       state.freezeRunner = r.name;
       save();
       paint();
-      log(`${r.name} opened a decoy — −2 pts, 15s freeze`, "bad");
+      log(`${r.name} opened a decoy box: -2 pts, 10s freeze`, "bad");
     });
   });
 
@@ -3638,17 +4006,22 @@ function log(msg, cls = "") {
 }
 
 /* ---------- init ---------- */
-function init() {
+async function init() {
+  await detectMode();
   paint();
   paintClock();
   paintStatus();
   startTicker();
+  startHeartbeat();
   setInterval(paintStatus, 1000);
+  log(MODE === "server"
+    ? "Console ready - SERVER mode (phone / any device)"
+    : "Console ready - LOCAL mode (same browser as the game only)");
   if (state.running) log("Resumed with existing timer");
-  else log("Console ready");
 }
 
 window.addEventListener("storage", (e) => {
+  if (MODE !== "local") return;
   if (e.key === STATE_KEY && e.newValue) {
     try { state = JSON.parse(e.newValue); paint(); paintClock(); } catch {}
   }

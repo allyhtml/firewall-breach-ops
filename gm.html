@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
@@ -199,20 +199,59 @@ let state = load() || {
 function load() {
   try { return JSON.parse(localStorage.getItem(STATE_KEY)); } catch { return null; }
 }
-function save() {
-  localStorage.setItem(STATE_KEY, JSON.stringify(state));
-  push();
+
+/* ---------- transport: server mode if available, else localStorage ---------- */
+let MODE = "local";
+
+async function detectMode() {
+  if (location.protocol === "file:") { MODE = "local"; return; }
+  try {
+    const c = new AbortController();
+    const t = setTimeout(() => c.abort(), 1200);
+    const r = await fetch("api/state", { signal: c.signal, cache: "no-store" });
+    clearTimeout(t);
+    if (r.ok) { MODE = "server"; return; }
+  } catch {}
+  MODE = "local";
 }
-function push() {
+
+/* push current state out */
+async function save() {
+  state.beat = Date.now();
   const payload = {
     running: state.running,
     endsAt: state.endsAt,
     remaining: state.remaining,
     freezeUntil: state.freezeUntil || 0,
     freezeRunner: state.freezeRunner || "",
-    forceSecure: Number(localStorage.getItem("fb_force_secure") || 0)
+    forceSecure: state.forceSecure || 0,
+    timeUp: !!state.timeUp,
+    beat: state.beat
   };
+
+  if (MODE === "server") {
+    try {
+      await fetch("api/state", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+    } catch (e) {
+      console.warn("server push failed, falling back", e);
+      MODE = "local";
+    }
+  }
+
+  /* always mirror to localStorage so same-browser tab works either way */
+  localStorage.setItem(STATE_KEY, JSON.stringify(state));
   localStorage.setItem(KEY, JSON.stringify(payload));
+}
+
+function push() { return save(); }
+
+/* heartbeat so the game knows the GM is alive */
+function startHeartbeat() {
+  setInterval(() => { save(); }, 2000);
 }
 
 /* ---------- timer ---------- */
@@ -254,6 +293,7 @@ document.getElementById("btnStart").addEventListener("click", () => {
   if (state.remaining <= 0) state.remaining = 15 * 60 * 1000;
   state.endsAt = Date.now() + state.remaining;
   state.running = true;
+  state.timeUp = false;
   save();
   log("Timer started — 15:00");
 });
@@ -270,8 +310,10 @@ document.getElementById("btnEnd").addEventListener("click", () => {
   state.running = false;
   state.remaining = 0;
   state.endsAt = 0;
+  state.timeUp = true;
   save();
-  log("Round ended by GM", "bad");
+  paint();
+  log("Round ended by GM — TIME UP sent to laptop", "bad");
 });
 
 document.getElementById("btnReset").addEventListener("click", () => {
@@ -285,6 +327,8 @@ document.getElementById("btnReset").addEventListener("click", () => {
     penalties: 0,
     freezeUntil: 0,
     freezeRunner: "",
+    forceSecure: 0,
+    timeUp: false,
     runners: [
       { name: "Runner 1", decoys: 0 },
       { name: "Runner 2", decoys: 0 },
@@ -297,8 +341,11 @@ document.getElementById("btnReset").addEventListener("click", () => {
 });
 
 document.getElementById("btnForceSecure").addEventListener("click", () => {
-  localStorage.setItem("fb_force_secure", String(Date.now()));
-  log("Force-secure signalled", "hi");
+  state.forceSecure = Date.now();
+  state.running = false;
+  state.timeUp = false;
+  save();
+  log("Force-secure sent to laptop", "hi");
 });
 
 document.getElementById("btnMinus2").addEventListener("click", () => {
@@ -328,7 +375,7 @@ function paint() {
     <div class="runner">
       <div class="rname">${r.name}</div>
       <div class="rscore">${r.decoys} decoy${r.decoys === 1 ? "" : "s"}</div>
-      <button class="freeze-btn" data-i="${i}">Freeze 15s</button>
+      <button class="freeze-btn" data-i="${i}">Freeze 10s</button>
     </div>
   `).join("");
 
@@ -338,11 +385,11 @@ function paint() {
       const r = state.runners[i];
       r.decoys++;
       state.penalties += 2;
-      state.freezeUntil = Date.now() + 15000;
+      state.freezeUntil = Date.now() + 10000;
       state.freezeRunner = r.name;
       save();
       paint();
-      log(`${r.name} opened a decoy — −2 pts, 15s freeze`, "bad");
+      log(`${r.name} opened a decoy box: -2 pts, 10s freeze`, "bad");
     });
   });
 
@@ -379,17 +426,22 @@ function log(msg, cls = "") {
 }
 
 /* ---------- init ---------- */
-function init() {
+async function init() {
+  await detectMode();
   paint();
   paintClock();
   paintStatus();
   startTicker();
+  startHeartbeat();
   setInterval(paintStatus, 1000);
+  log(MODE === "server"
+    ? "Console ready - SERVER mode (phone / any device)"
+    : "Console ready - LOCAL mode (same browser as the game only)");
   if (state.running) log("Resumed with existing timer");
-  else log("Console ready");
 }
 
 window.addEventListener("storage", (e) => {
+  if (MODE !== "local") return;
   if (e.key === STATE_KEY && e.newValue) {
     try { state = JSON.parse(e.newValue); paint(); paintClock(); } catch {}
   }
