@@ -153,9 +153,9 @@ const Game = (() => {
       document.body.classList.add("infected");
       Breach.show(() => {
         MailApp.open();
-        Ransom.open();
+        ChatApp.open();
         setTimeout(() => {
-          ChatApp.open();
+          Ransom.open();
           setTimeout(() => {
             UI.toast("Tip: click the sentence that seems wrong.", "info", 5000);
           }, 1400);

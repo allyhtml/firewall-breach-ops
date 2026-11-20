@@ -5,7 +5,6 @@
 
 const OverrideApp = (() => {
   let state = {
-    f1: false, f2: false, f3: false,
     codeOk: false,
     killed: false
   };
@@ -33,18 +32,22 @@ const OverrideApp = (() => {
         </div>
 
         <div class="frag-row" data-fragrow>
-          <div class="frag" data-slot="1"><div class="flabel">Fragment 1</div><div class="fval">···</div></div>
-          <div class="frag" data-slot="2"><div class="flabel">Fragment 2</div><div class="fval">···</div></div>
-          <div class="frag" data-slot="3"><div class="flabel">Fragment 3</div><div class="fval">···</div></div>
+          <label class="frag" data-slot="1">
+            <span class="flabel">Fragment 1</span>
+            <input class="finput" data-fi="1" maxlength="4" autocomplete="off" spellcheck="false" placeholder="···">
+          </label>
+          <label class="frag" data-slot="2">
+            <span class="flabel">Fragment 2</span>
+            <input class="finput" data-fi="2" maxlength="4" autocomplete="off" spellcheck="false" placeholder="···">
+          </label>
+          <label class="frag" data-slot="3">
+            <span class="flabel">Fragment 3</span>
+            <input class="finput" data-fi="3" maxlength="4" autocomplete="off" spellcheck="false" placeholder="···">
+          </label>
         </div>
 
-        <div style="text-align:center;font-size:11px;color:var(--txt-mute);margin-top:2px">
-          Type each fragment card into the box below, one at a time
-        </div>
-
-        <div class="code-row" data-fragcode>
-          <input type="text" maxlength="6" placeholder="TYPE A FRAGMENT" data-input="frag" autocomplete="off" spellcheck="false">
-          <button class="btn" data-act="frag">Submit</button>
+        <div style="text-align:center;font-size:12px;color:var(--txt-dim);margin-top:6px">
+          Type one fragment card into each box — press Enter or move on when a box turns green
         </div>
 
         <div class="code-row" style="margin-top:20px">
@@ -93,54 +96,127 @@ const OverrideApp = (() => {
   }
 
   function wire(root) {
-    const fragInput = root.querySelector('[data-input="frag"]');
-    const fragBtn = root.querySelector('[data-act="frag"]');
     const codeInput = root.querySelector('[data-input="code"]');
     const ovrBtn = root.querySelector('[data-act="ovr"]');
     const killBtn = root.querySelector('[data-act="kill"]');
+    const finputs = [1, 2, 3].map(n => root.querySelector(`[data-fi="${n}"]`));
 
-    fragBtn.addEventListener("click", submitFrag);
-    fragInput.addEventListener("keydown", (e) => { if (e.key === "Enter") submitFrag(); });
+    let locked = false;
 
-    function submitFrag() {
-      const val = fragInput.value.trim().toUpperCase();
-      if (!val) return;
+    finputs.forEach((inp, i) => {
+      inp.addEventListener("focus", () => inp.select());
 
-      const idx = GameData.fragments.indexOf(val);
-      const slotKey = "f" + (idx + 1);
+      inp.addEventListener("input", () => {
+        inp.value = inp.value.toUpperCase();
+        inp.classList.remove("bad");
 
-      if (idx === -1) {
-        fragInput.classList.add("bad");
-        setTimeout(() => fragInput.classList.remove("bad"), 400);
-        UI.toast("That fragment is not valid.", "bad", 2000);
-        logAdd(root, "l-err", `REJECTED  "${val}" — no matching fragment`);
-        return;
-      }
+        if (locked) return;
+        const val = inp.value.trim();
 
-      if (state[slotKey]) {
-        UI.toast("That fragment is already loaded.", "info", 2000);
-        fragInput.value = "";
-        return;
-      }
+        if (!val) {
+          delete inp.dataset.accepted;
+          root.querySelector(`[data-slot="${i + 1}"]`).classList.remove("done");
+          return;
+        }
 
-      state[slotKey] = true;
-      const slot = root.querySelector(`[data-slot="${idx + 1}"]`);
+        if (GameData.fragments.includes(val)) {
+          checkFragment(i);
+          return;
+        }
+
+        /* instant feedback: red only when the text can no longer become a fragment */
+        const isPrefix = GameData.fragments.some(f => f.startsWith(val));
+        if (!isPrefix) inp.classList.add("bad");
+      });
+
+      inp.addEventListener("keydown", (e) => {
+        if (e.key !== "Enter") return;
+        e.preventDefault();
+        if (locked) return;
+        const val = inp.value.trim().toUpperCase();
+        if (!val) return;
+        if (GameData.fragments.includes(val)) checkFragment(i);
+        else rejectInvalid(i, val);
+      });
+
+      inp.addEventListener("blur", () => {
+        if (locked) return;
+        const val = inp.value.trim().toUpperCase();
+        if (!val) return;
+        if (GameData.fragments.includes(val)) checkFragment(i);
+        else rejectInvalid(i, val);
+      });
+    });
+
+    function rejectInvalid(i, val) {
+      const inp = finputs[i];
+      if (inp.dataset.accepted) return;
+      inp.classList.add("bad");
+      delete inp.dataset.accepted;
+      root.querySelector(`[data-slot="${i + 1}"]`).classList.remove("done");
+      setTimeout(() => {
+        inp.classList.remove("bad");
+        if (!inp.dataset.accepted) inp.value = "";
+      }, 420);
+      UI.toast("That fragment is not valid.", "bad", 2000);
+      logAdd(root, "l-err", `REJECTED  "${val}" — no matching fragment`);
+    }
+
+    function slotDone(n) {
+      const slot = root.querySelector(`[data-slot="${n}"]`);
       slot.classList.add("done");
-      slot.querySelector(".fval").textContent = val;
-      fragInput.value = "";
-      fragInput.focus();
+    }
 
-      UI.toast(`Fragment accepted: ${val}`, "good", 1800);
-      logAdd(root, "l-ok", `ACCEPTED  ${val} → slot ${idx + 1} [OK]`);
+    function checkFragment(i) {
+      const inp = finputs[i];
+      const val = inp.value.trim().toUpperCase();
+      if (!val || locked) return;
 
-      const allDone = state.f1 && state.f2 && state.f3;
-      if (allDone) {
+      /* already accepted in this exact box -> do nothing (input + blur double-fire) */
+      if (inp.dataset.accepted === val) return;
+
+      if (!GameData.fragments.includes(val)) {
+        rejectInvalid(i, val);
+        return;
+      }
+
+      const alreadyIn = finputs.some(
+        (x, j) => j !== i && x.value.trim().toUpperCase() === val
+      );
+      if (alreadyIn) {
+        inp.classList.add("bad");
+        delete inp.dataset.accepted;
+        root.querySelector(`[data-slot="${i + 1}"]`).classList.remove("done");
+        setTimeout(() => {
+          inp.classList.remove("bad");
+          if (!inp.dataset.accepted) inp.value = "";
+        }, 420);
+        UI.toast("That fragment is already loaded.", "info", 2000);
+        return;
+      }
+
+      inp.value = val;
+      inp.dataset.accepted = val;
+      slotDone(i + 1);
+      UI.toast(`Fragment accepted: ${val}`, "good", 1500);
+      logAdd(root, "l-ok", `ACCEPTED  ${val} → slot ${i + 1} [OK]`);
+
+      const loaded = GameData.fragments.every(
+        f => finputs.some(x => x.value.trim().toUpperCase() === f)
+      );
+
+      if (loaded) {
+        locked = true;
+        finputs.forEach(x => { x.disabled = true; });
         codeInput.disabled = false;
         ovrBtn.disabled = false;
         codeInput.focus();
         logAdd(root, "l-cy", "All fragments loaded — enter override code");
-        UI.toast("All three fragments loaded. Enter the override code.", "good", 3200);
+        UI.toast("All three fragments loaded. Type the override code.", "good", 3400);
         setProgress(root, 33);
+      } else {
+        const nxt = finputs.find(x => x !== inp && !x.value.trim());
+        if (nxt) nxt.focus();
       }
     }
 

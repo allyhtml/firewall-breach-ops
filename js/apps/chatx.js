@@ -11,8 +11,10 @@ const ChatApp = (() => {
       id: "chatx",
       title: "ChatX",
       icon: Icons.chat,
-      width: 900,
-      height: 600
+      width: 820,
+      height: 540,
+      x: 560,
+      y: 190
     });
     Taskbar.register("chatx", "ChatX", Icons.chat);
     render(body);

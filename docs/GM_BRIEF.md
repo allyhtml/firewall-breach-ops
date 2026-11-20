@@ -15,6 +15,8 @@ Cyber Analysts read the emails and chat messages, find the sentence that is a tr
 
 Three fragments → one override code → system secured.
 
+> **Screen flow:** the laptop opens Mail and ChatX, then the ransom note on top of them. Teams can minimize the ransom note to read the apps behind it and restore it from the taskbar.
+
 ---
 
 ## Flow
@@ -175,8 +177,8 @@ The message you want: **urgency, requests for codes, and unknown numbers are the
 |---|---|
 | Timer not moving on the laptop | The GM console must be open in the same browser on the same device. Press **Start** again. |
 | Freeze overlay won't go away | It clears itself after 15s. Reload if stuck. |
-| A team's fragments won't be accepted | Case-insensitive, any order, only `FRM`, `26`, `XP` are valid. Check the cards were printed correctly. |
-| Override code rejected | It is `FRM-26-XP`. The dashes matter. |
+| A team's fragments won't be accepted | Type each fragment into its own box in the System Override app — the box turns green when accepted. Case-insensitive, any order, only `FRM`, `26`, `XP` are valid. Check the cards were printed correctly. |
+| Override code rejected | It is `FRM-26-XP`. The dashes matter. The code field unlocks only after all three fragment boxes are green. |
 | Game already ended (secured screen) | GM → Reset all, then reload `index.html`. |
 | No internet at the venue | Use `dist/firewall-breach.html` — single file, works offline, double-click to play. GM console in that build is at the `#gm` route. |
 

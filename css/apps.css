@@ -326,8 +326,8 @@
 }
 
 .frag {
-  width: 108px;
-  height: 92px;
+  width: 128px;
+  height: 100px;
   border-radius: 12px;
   border: 2px dashed var(--line-2);
   background: rgba(10, 16, 28, .8);
@@ -335,9 +335,16 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 4px;
+  gap: 6px;
   transition: all .2s;
   position: relative;
+  cursor: text;
+}
+.frag:hover { border-color: rgba(34, 211, 238, .5); background: rgba(34, 211, 238, .05); }
+.frag:focus-within {
+  border-color: var(--cyan);
+  border-style: solid;
+  box-shadow: 0 0 0 3px rgba(34, 211, 238, .16);
 }
 .frag .flabel {
   font-size: 8.5px;
@@ -345,23 +352,34 @@
   text-transform: uppercase;
   color: var(--txt-mute);
   font-weight: 700;
+  pointer-events: none;
 }
-.frag .fval {
+.frag .finput {
+  width: 92px;
+  border: 0;
+  background: transparent;
+  outline: none;
   font-family: var(--mono);
-  font-size: 21px;
+  font-size: 24px;
   font-weight: 700;
-  letter-spacing: .12em;
-  color: var(--txt-mute);
+  letter-spacing: .14em;
+  text-align: center;
+  text-transform: uppercase;
+  color: var(--cyan);
+  padding: 0;
+  caret-color: var(--cyan);
 }
+.frag .finput::placeholder { color: #2d3d55; font-size: 20px; }
+.frag .finput:disabled { color: var(--green); cursor: default; }
 .frag.done {
   border-style: solid;
   border-color: rgba(52, 211, 153, .65);
   background: rgba(52, 211, 153, .09);
   box-shadow: 0 0 22px rgba(52, 211, 153, .18);
 }
-.frag.done .fval { color: var(--green); text-shadow: 0 0 16px rgba(52, 211, 153, .6); }
+.frag.done .finput { color: var(--green); text-shadow: 0 0 16px rgba(52, 211, 153, .6); }
 .frag.done .flabel { color: #6ee7b7; }
-.frag.shake { animation: shake .34s; }
+.frag.bad { border-color: var(--red); animation: shake .34s; }
 
 .code-row {
   display: flex;

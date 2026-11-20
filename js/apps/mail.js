@@ -11,8 +11,10 @@ const MailApp = (() => {
       id: "mail",
       title: "Mail — Danial's Inbox",
       icon: Icons.mail,
-      width: 940,
-      height: 610
+      width: 860,
+      height: 560,
+      x: 40,
+      y: 60
     });
     Taskbar.register("mail", "Mail", Icons.mail);
     render(body);

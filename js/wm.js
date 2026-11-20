@@ -29,8 +29,10 @@ const WM = (() => {
     const h = height > dh - 80 ? dh - 60 : height;
 
     cascade = (cascade + 1) % 7;
-    const px = x != null ? x : Math.max(40, Math.round((dw - w) / 2) - 40 + cascade * 26);
-    const py = y != null ? y : Math.max(44, Math.round((dh - h) / 2) - 20 + cascade * 22);
+    const px = Math.max(8, Math.min(dw - Math.min(w, dw - 16) - 8,
+      x != null ? x : Math.round((dw - w) / 2) - 40 + cascade * 26));
+    const py = Math.max(40, Math.min(dh - Math.min(h, dh - 52) - 8,
+      y != null ? y : Math.round((dh - h) / 2) - 20 + cascade * 22));
 
     const node = el(`
       <div class="win" id="win-${id}" style="left:${px}px;top:${py}px;width:${w}px;height:${h}px">

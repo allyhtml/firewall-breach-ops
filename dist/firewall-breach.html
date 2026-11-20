@@ -689,8 +689,8 @@ body.secured .sb-threat {
 }
 
 .frag {
-  width: 108px;
-  height: 92px;
+  width: 128px;
+  height: 100px;
   border-radius: 12px;
   border: 2px dashed var(--line-2);
   background: rgba(10, 16, 28, .8);
@@ -698,9 +698,16 @@ body.secured .sb-threat {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 4px;
+  gap: 6px;
   transition: all .2s;
   position: relative;
+  cursor: text;
+}
+.frag:hover { border-color: rgba(34, 211, 238, .5); background: rgba(34, 211, 238, .05); }
+.frag:focus-within {
+  border-color: var(--cyan);
+  border-style: solid;
+  box-shadow: 0 0 0 3px rgba(34, 211, 238, .16);
 }
 .frag .flabel {
   font-size: 8.5px;
@@ -708,23 +715,34 @@ body.secured .sb-threat {
   text-transform: uppercase;
   color: var(--txt-mute);
   font-weight: 700;
+  pointer-events: none;
 }
-.frag .fval {
+.frag .finput {
+  width: 92px;
+  border: 0;
+  background: transparent;
+  outline: none;
   font-family: var(--mono);
-  font-size: 21px;
+  font-size: 24px;
   font-weight: 700;
-  letter-spacing: .12em;
-  color: var(--txt-mute);
+  letter-spacing: .14em;
+  text-align: center;
+  text-transform: uppercase;
+  color: var(--cyan);
+  padding: 0;
+  caret-color: var(--cyan);
 }
+.frag .finput::placeholder { color: #2d3d55; font-size: 20px; }
+.frag .finput:disabled { color: var(--green); cursor: default; }
 .frag.done {
   border-style: solid;
   border-color: rgba(52, 211, 153, .65);
   background: rgba(52, 211, 153, .09);
   box-shadow: 0 0 22px rgba(52, 211, 153, .18);
 }
-.frag.done .fval { color: var(--green); text-shadow: 0 0 16px rgba(52, 211, 153, .6); }
+.frag.done .finput { color: var(--green); text-shadow: 0 0 16px rgba(52, 211, 153, .6); }
 .frag.done .flabel { color: #6ee7b7; }
-.frag.shake { animation: shake .34s; }
+.frag.bad { border-color: var(--red); animation: shake .34s; }
 
 .code-row {
   display: flex;
@@ -2104,8 +2122,10 @@ const WM = (() => {
     const h = height > dh - 80 ? dh - 60 : height;
 
     cascade = (cascade + 1) % 7;
-    const px = x != null ? x : Math.max(40, Math.round((dw - w) / 2) - 40 + cascade * 26);
-    const py = y != null ? y : Math.max(44, Math.round((dh - h) / 2) - 20 + cascade * 22);
+    const px = Math.max(8, Math.min(dw - Math.min(w, dw - 16) - 8,
+      x != null ? x : Math.round((dw - w) / 2) - 40 + cascade * 26));
+    const py = Math.max(40, Math.min(dh - Math.min(h, dh - 52) - 8,
+      y != null ? y : Math.round((dh - h) / 2) - 20 + cascade * 22));
 
     const node = el(`
       <div class="win" id="win-${id}" style="left:${px}px;top:${py}px;width:${w}px;height:${h}px">
@@ -2511,8 +2531,10 @@ const MailApp = (() => {
       id: "mail",
       title: "Mail — Danial's Inbox",
       icon: Icons.mail,
-      width: 940,
-      height: 610
+      width: 860,
+      height: 560,
+      x: 40,
+      y: 60
     });
     Taskbar.register("mail", "Mail", Icons.mail);
     render(body);
@@ -2608,8 +2630,10 @@ const ChatApp = (() => {
       id: "chatx",
       title: "ChatX",
       icon: Icons.chat,
-      width: 900,
-      height: 600
+      width: 820,
+      height: 540,
+      x: 560,
+      y: 190
     });
     Taskbar.register("chatx", "ChatX", Icons.chat);
     render(body);
@@ -2725,7 +2749,6 @@ const ChatApp = (() => {
 
 const OverrideApp = (() => {
   let state = {
-    f1: false, f2: false, f3: false,
     codeOk: false,
     killed: false
   };
@@ -2753,18 +2776,22 @@ const OverrideApp = (() => {
         </div>
 
         <div class="frag-row" data-fragrow>
-          <div class="frag" data-slot="1"><div class="flabel">Fragment 1</div><div class="fval">···</div></div>
-          <div class="frag" data-slot="2"><div class="flabel">Fragment 2</div><div class="fval">···</div></div>
-          <div class="frag" data-slot="3"><div class="flabel">Fragment 3</div><div class="fval">···</div></div>
+          <label class="frag" data-slot="1">
+            <span class="flabel">Fragment 1</span>
+            <input class="finput" data-fi="1" maxlength="4" autocomplete="off" spellcheck="false" placeholder="···">
+          </label>
+          <label class="frag" data-slot="2">
+            <span class="flabel">Fragment 2</span>
+            <input class="finput" data-fi="2" maxlength="4" autocomplete="off" spellcheck="false" placeholder="···">
+          </label>
+          <label class="frag" data-slot="3">
+            <span class="flabel">Fragment 3</span>
+            <input class="finput" data-fi="3" maxlength="4" autocomplete="off" spellcheck="false" placeholder="···">
+          </label>
         </div>
 
-        <div style="text-align:center;font-size:11px;color:var(--txt-mute);margin-top:2px">
-          Type each fragment card into the box below, one at a time
-        </div>
-
-        <div class="code-row" data-fragcode>
-          <input type="text" maxlength="6" placeholder="TYPE A FRAGMENT" data-input="frag" autocomplete="off" spellcheck="false">
-          <button class="btn" data-act="frag">Submit</button>
+        <div style="text-align:center;font-size:12px;color:var(--txt-dim);margin-top:6px">
+          Type one fragment card into each box — press Enter or move on when a box turns green
         </div>
 
         <div class="code-row" style="margin-top:20px">
@@ -2813,54 +2840,127 @@ const OverrideApp = (() => {
   }
 
   function wire(root) {
-    const fragInput = root.querySelector('[data-input="frag"]');
-    const fragBtn = root.querySelector('[data-act="frag"]');
     const codeInput = root.querySelector('[data-input="code"]');
     const ovrBtn = root.querySelector('[data-act="ovr"]');
     const killBtn = root.querySelector('[data-act="kill"]');
+    const finputs = [1, 2, 3].map(n => root.querySelector(`[data-fi="${n}"]`));
 
-    fragBtn.addEventListener("click", submitFrag);
-    fragInput.addEventListener("keydown", (e) => { if (e.key === "Enter") submitFrag(); });
+    let locked = false;
 
-    function submitFrag() {
-      const val = fragInput.value.trim().toUpperCase();
-      if (!val) return;
+    finputs.forEach((inp, i) => {
+      inp.addEventListener("focus", () => inp.select());
 
-      const idx = GameData.fragments.indexOf(val);
-      const slotKey = "f" + (idx + 1);
+      inp.addEventListener("input", () => {
+        inp.value = inp.value.toUpperCase();
+        inp.classList.remove("bad");
 
-      if (idx === -1) {
-        fragInput.classList.add("bad");
-        setTimeout(() => fragInput.classList.remove("bad"), 400);
-        UI.toast("That fragment is not valid.", "bad", 2000);
-        logAdd(root, "l-err", `REJECTED  "${val}" — no matching fragment`);
-        return;
-      }
+        if (locked) return;
+        const val = inp.value.trim();
 
-      if (state[slotKey]) {
-        UI.toast("That fragment is already loaded.", "info", 2000);
-        fragInput.value = "";
-        return;
-      }
+        if (!val) {
+          delete inp.dataset.accepted;
+          root.querySelector(`[data-slot="${i + 1}"]`).classList.remove("done");
+          return;
+        }
 
-      state[slotKey] = true;
-      const slot = root.querySelector(`[data-slot="${idx + 1}"]`);
+        if (GameData.fragments.includes(val)) {
+          checkFragment(i);
+          return;
+        }
+
+        /* instant feedback: red only when the text can no longer become a fragment */
+        const isPrefix = GameData.fragments.some(f => f.startsWith(val));
+        if (!isPrefix) inp.classList.add("bad");
+      });
+
+      inp.addEventListener("keydown", (e) => {
+        if (e.key !== "Enter") return;
+        e.preventDefault();
+        if (locked) return;
+        const val = inp.value.trim().toUpperCase();
+        if (!val) return;
+        if (GameData.fragments.includes(val)) checkFragment(i);
+        else rejectInvalid(i, val);
+      });
+
+      inp.addEventListener("blur", () => {
+        if (locked) return;
+        const val = inp.value.trim().toUpperCase();
+        if (!val) return;
+        if (GameData.fragments.includes(val)) checkFragment(i);
+        else rejectInvalid(i, val);
+      });
+    });
+
+    function rejectInvalid(i, val) {
+      const inp = finputs[i];
+      if (inp.dataset.accepted) return;
+      inp.classList.add("bad");
+      delete inp.dataset.accepted;
+      root.querySelector(`[data-slot="${i + 1}"]`).classList.remove("done");
+      setTimeout(() => {
+        inp.classList.remove("bad");
+        if (!inp.dataset.accepted) inp.value = "";
+      }, 420);
+      UI.toast("That fragment is not valid.", "bad", 2000);
+      logAdd(root, "l-err", `REJECTED  "${val}" — no matching fragment`);
+    }
+
+    function slotDone(n) {
+      const slot = root.querySelector(`[data-slot="${n}"]`);
       slot.classList.add("done");
-      slot.querySelector(".fval").textContent = val;
-      fragInput.value = "";
-      fragInput.focus();
+    }
 
-      UI.toast(`Fragment accepted: ${val}`, "good", 1800);
-      logAdd(root, "l-ok", `ACCEPTED  ${val} → slot ${idx + 1} [OK]`);
+    function checkFragment(i) {
+      const inp = finputs[i];
+      const val = inp.value.trim().toUpperCase();
+      if (!val || locked) return;
 
-      const allDone = state.f1 && state.f2 && state.f3;
-      if (allDone) {
+      /* already accepted in this exact box -> do nothing (input + blur double-fire) */
+      if (inp.dataset.accepted === val) return;
+
+      if (!GameData.fragments.includes(val)) {
+        rejectInvalid(i, val);
+        return;
+      }
+
+      const alreadyIn = finputs.some(
+        (x, j) => j !== i && x.value.trim().toUpperCase() === val
+      );
+      if (alreadyIn) {
+        inp.classList.add("bad");
+        delete inp.dataset.accepted;
+        root.querySelector(`[data-slot="${i + 1}"]`).classList.remove("done");
+        setTimeout(() => {
+          inp.classList.remove("bad");
+          if (!inp.dataset.accepted) inp.value = "";
+        }, 420);
+        UI.toast("That fragment is already loaded.", "info", 2000);
+        return;
+      }
+
+      inp.value = val;
+      inp.dataset.accepted = val;
+      slotDone(i + 1);
+      UI.toast(`Fragment accepted: ${val}`, "good", 1500);
+      logAdd(root, "l-ok", `ACCEPTED  ${val} → slot ${i + 1} [OK]`);
+
+      const loaded = GameData.fragments.every(
+        f => finputs.some(x => x.value.trim().toUpperCase() === f)
+      );
+
+      if (loaded) {
+        locked = true;
+        finputs.forEach(x => { x.disabled = true; });
         codeInput.disabled = false;
         ovrBtn.disabled = false;
         codeInput.focus();
         logAdd(root, "l-cy", "All fragments loaded — enter override code");
-        UI.toast("All three fragments loaded. Enter the override code.", "good", 3200);
+        UI.toast("All three fragments loaded. Type the override code.", "good", 3400);
         setProgress(root, 33);
+      } else {
+        const nxt = finputs.find(x => x !== inp && !x.value.trim());
+        if (nxt) nxt.focus();
       }
     }
 
@@ -3099,8 +3199,10 @@ const Ransom = (() => {
       id: "ransom",
       title: "RANSOM_NOTE.txt — Notepad",
       icon: Icons.lock,
-      width: 660,
-      height: 540
+      width: 640,
+      height: 500,
+      x: 260,
+      y: 100
     });
     Taskbar.register("ransom", "RANSOM_NOTE.txt", Icons.lock);
     shown = true;
@@ -3288,9 +3390,9 @@ const Game = (() => {
       document.body.classList.add("infected");
       Breach.show(() => {
         MailApp.open();
-        Ransom.open();
+        ChatApp.open();
         setTimeout(() => {
-          ChatApp.open();
+          Ransom.open();
           setTimeout(() => {
             UI.toast("Tip: click the sentence that seems wrong.", "info", 5000);
           }, 1400);

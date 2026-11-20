@@ -135,8 +135,10 @@ const Ransom = (() => {
       id: "ransom",
       title: "RANSOM_NOTE.txt — Notepad",
       icon: Icons.lock,
-      width: 660,
-      height: 540
+      width: 640,
+      height: 500,
+      x: 260,
+      y: 100
     });
     Taskbar.register("ransom", "RANSOM_NOTE.txt", Icons.lock);
     shown = true;
